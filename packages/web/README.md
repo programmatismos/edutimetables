@@ -8,7 +8,7 @@ Unified server — serves both the Hono API under `/api` and the React frontend 
 bun run dev
 ```
 
-The server port is read from the root `app.config.json`.
+The server port is configured automatically.
 
 ## Typecheck and build
 

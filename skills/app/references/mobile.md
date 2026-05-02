@@ -108,22 +108,6 @@ export default function TabLayout() {
 }
 ```
 
-## Port Setup
-
-**Required during app creation:** Update `packages/mobile/package.json` — add `--port <mobile port from app.config.json>` to all scripts:
-
-```json
-{
-  "scripts": {
-    "dev": "expo start --port <services.mobile.port>",
-    "start": "expo start --port <services.mobile.port>",
-    "android": "expo start --android --port <services.mobile.port>",
-    "ios": "expo start --ios --port <services.mobile.port>",
-    "web": "expo start --web --port <services.mobile.port>"
-  }
-}
-```
-
 ## Typed API Client
 
 Uses `hono/client` for typed calls and `@tanstack/react-query` for state management:

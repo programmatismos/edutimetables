@@ -4,14 +4,11 @@ import tailwind from "@tailwindcss/vite"
 import path from "path";
 import runableAnalyticsPlugin from "./vite/plugins/runable-analytics-plugin";
 import honoDevPlugin from "./vite/plugins/hono-dev-plugin";
-import appConfig from "../../app.config.json";
 
 const root = path.resolve(__dirname, "../..");
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, root, '');
-	const port = appConfig.services.website.port;
-	if (!env.BETTER_AUTH_URL) env.BETTER_AUTH_URL = `http://localhost:${port}`;
 	Object.assign(process.env, env);
 
 	return {
@@ -22,7 +19,6 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		server: {
-			port: appConfig.services.website.port,
 			allowedHosts: true,
 			hmr: { overlay: false, }
 		}

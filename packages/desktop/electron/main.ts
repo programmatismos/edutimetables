@@ -2,12 +2,10 @@ import { app, BrowserWindow, ipcMain, dialog, Notification } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
-import appConfig from "../../../app.config.json";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const isDev = process.env.NODE_ENV !== "production";
-const WEB_DEV_URL = `http://localhost:${appConfig.services.website.port}`;
+const WEB_DEV_URL = process.env.WEBSITE_URL ?? "http://localhost:3000";
 const WEB_DIST = path.join(__dirname, "../web-dist");
 
 let win: BrowserWindow | null;

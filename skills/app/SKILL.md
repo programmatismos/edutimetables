@@ -13,11 +13,11 @@ Monorepo: Bun workspaces + Turborepo.
 - **API:** Hono with `.basePath('api')`, Drizzle ORM + Turso (SQLite) — source in `packages/web/src/api/`
 - **Web Frontend:** React 19 + Wouter + Tailwind CSS 4, bundled by Vite — source in `packages/web/src/web/`
 - **Mobile:** Expo + React Native + expo-router
-- **Desktop:** Electron shell + Vite (loads the web app from the server, exposes native APIs via IPC) — Vite/Electron ports come from `app.config.json`
+- **Desktop:** Electron shell + Vite (loads the web app from the server, exposes native APIs via IPC)
 
 ## App Config
 
-All service configuration lives in `app.config.json` at the project root. Read this file to get ports and dev commands for each service. The template code reads ports from this file; do not hardcode ports in application code, agent examples, or platform clients. The web service serves both the API at `/api/*` and the web frontend at `/*` from a single web port.
+The web service serves both the API at `/api/*` and the web frontend at `/*` from a single port. Ports are configured automatically — do not hardcode them.
 
 Typed end-to-end: `packages/web` exports `AppType` from `src/api/index.ts`, all clients use `hono/client` for typed API calls and `@tanstack/react-query` for queries and mutations.
 
@@ -54,17 +54,8 @@ Document design direction in `design.md` inside the website project directory be
 - **Routes should be defined without `/api` prefix.** `.basePath('api')` adds it. `.get("/health", ...)` → `/api/health`.
 - **Typed client paths include `api/`** (e.g., `"api/health"`). `baseUrl` is just the origin — no `/api`.
 - **Desktop loads the web app** — no separate renderer. Gate desktop UI with `useDesktop()` / `window.electronAPI`. Only create a separate renderer if explicitly asked.
-- **Vite loads `.env` automatically** — no dotenv needed. Always use `.env`, never `.env.local`. Vite also auto-sets `BETTER_AUTH_URL` from `app.config.json` port.
-- **Never hardcode ports** — always read from `app.config.json`. Import it as `import appConfig from "../../app.config.json"` and use `appConfig.services.website.port`.
-- **Before starting a dev server**, kill any process already running on that port: `lsof -ti:<port> | xargs kill -9 2>/dev/null`.
-
-### Dev Commands
-
-```bash
-bun run dev              # API + web via Vite
-bun run dev:mobile       # Expo dev server
-bun run dev:desktop      # requires server running first
-```
+- **Vite loads `.env` automatically** — no dotenv needed. Always use `.env`, never `.env.local`.
+- **Dev servers are started automatically** — do not run them manually.
 
 ### Database
 
@@ -93,4 +84,4 @@ Must Read a reference **only when implementing that feature**. Do not read all r
 
 ## Testing
 
-Before delivering, run `bun run build` to verify the app compiles without errors. Then start `bun run dev` and `bun run dev:mobile` and check that both are reachable on their ports from `app.config.json`. Fix any failures before delivering.
+Before delivering, run `bun run build` to verify the app compiles without errors. Fix any failures before delivering. Dev servers are started automatically — do not start them manually.

@@ -6,9 +6,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo dev --filter=@template/web",
+    "dev": "cd packages/web && bunx vite",
     "dev:desktop": "turbo dev --filter=@template/desktop",
-    "dev:mobile": "turbo dev --filter=@template/mobile",
+    "dev:mobile": "cd packages/mobile && bunx expo start",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "db:generate": "turbo db:generate",

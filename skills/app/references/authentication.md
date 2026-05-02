@@ -36,7 +36,7 @@ import { db } from "./database";
 
 export const auth = betterAuth({
   basePath: "/api/auth",
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: process.env.WEBSITE_URL,
   database: drizzleAdapter(db, { provider: "sqlite" }),
   emailAndPassword: { enabled: true },
   secret: process.env.BETTER_AUTH_SECRET,
@@ -44,7 +44,7 @@ export const auth = betterAuth({
 });
 ```
 
-`BETTER_AUTH_URL` is auto-set by `vite.config.ts` from `app.config.json` port — no need to import the JSON here. Do **not** use `import appConfig from "../../../app.config.json"` in this file — the Better Auth CLI uses jiti which cannot resolve JSON imports outside the package.
+`baseURL` is set from `WEBSITE_URL` env var. Required for OAuth callbacks and production. Do **not** import JSON config files in this file — the Better Auth CLI uses jiti which cannot resolve them.
 
 ## 3. Generate Auth Schema
 

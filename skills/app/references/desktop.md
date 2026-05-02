@@ -15,11 +15,11 @@ packages/desktop/
     preload.ts           contextBridge: exposes typed API to renderer as window.electronAPI
     electron-env.d.ts    Environment type declarations
     no-renderer.ts       Empty Vite input; desktop has no renderer UI of its own
-  vite.config.ts         Vite builds main + preload, reads port from app.config.json
+  vite.config.ts         Vite builds main + preload
   electron-builder.json5 Packaging config
 ```
 
-In **dev**, the main process loads the web from the server (port from `app.config.json`).
+In **dev**, the main process loads the web from the server.
 In **production**, it loads the built web app copied into `web-dist/`.
 
 ## Adding Desktop-Specific UI
