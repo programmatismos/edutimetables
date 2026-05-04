@@ -56,7 +56,7 @@ Document design direction in `design.md` inside the website project directory be
 - **Typed client paths include `api/`** (e.g., `"api/health"`). `baseUrl` is just the origin — no `/api`.
 - **Desktop loads the web app** — no separate renderer. Gate desktop UI with `useDesktop()` / `window.electronAPI`. Only create a separate renderer if explicitly asked.
 - **Vite loads `.env` automatically** — no dotenv needed. Always use `.env`, never `.env.local`.
-- **Dev servers are started automatically** — do not run them manually.
+- **Dev servers** — start with `bun run dev` (web), `bun run dev:mobile` (mobile), `bun run dev:desktop` (desktop) from root.
 
 ### Database
 
@@ -85,4 +85,4 @@ Must Read a reference **only when implementing that feature**. Do not read all r
 
 ## Testing
 
-Before delivering, run `bun run build` to verify the app compiles without errors. Fix any failures before delivering. Dev servers are started automatically — do not start them manually.
+Before delivering, run `bun run build` to verify the app compiles without errors. Fix any failures before delivering.
