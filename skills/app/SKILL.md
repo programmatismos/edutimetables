@@ -33,7 +33,7 @@ Do not start implementation until the user approves or adjusts the plan.
 
 Document design direction in `design.md` inside the website project directory before writing UI code. Reference it throughout for consistency.
 
-- **Typography**: distinctive, characterful fonts — never Inter, Roboto, Arial, system fonts. Pair display + body. Hierarchy through size/weight. Generous line height.
+- **Typography**: always set a font family. If no font is specified, default to Poppins for web. Pair display + body. Hierarchy through size/weight. Generous line height.
 - **Color**: dominant color with sharp accents. CSS variables + Tailwind. Accents for emphasis, not decoration.
 - **Layout**: asymmetric, overlapping, grid-breaking. Generous negative space or controlled density — intentionally.
 - **Backgrounds**: gradient meshes, noise textures, geometric patterns, layered transparencies. Match the aesthetic.
@@ -44,8 +44,9 @@ Document design direction in `design.md` inside the website project directory be
 
 1. Run preflight.
 2. Call `app_init` with absolute `app_path`, `name`, `description`. **Do NOT create the directory beforehand** — `app_init` creates it and fails if it already exists.
-3. Write `design.md` in the project root with the design direction from preflight (fonts, colors, spacing, style). This file guides all UI code for consistency.
-4. Build API routes, database schema, pages/screens, and ui components for the app.
+3. Move or copy any provided assets (images, logos, fonts, etc.) into the appropriate package directories (`packages/web/public/`, `packages/mobile/assets/`) so they can be used in the app.
+4. Write `design.md` in the project root with the design direction from preflight (fonts, colors, spacing, style). This file guides all UI code for consistency.
+5. Build API routes, database schema, pages/screens, and ui components for the app.
 5. Call `deliver` with required parameters for the apps.
 
 ### Rules

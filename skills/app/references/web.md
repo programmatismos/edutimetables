@@ -17,6 +17,7 @@ Use `lucide-react` for icons. For animated micro-interactions, use `lucide-anima
 ## Key Rules
 
 - **Always show a loading state for every API call** — check `isLoading` and render a loader/skeleton before rendering data. For action buttons (submit, save, delete, etc.), show a loading indicator and disable the button while the mutation is pending.
+- **Use optimistic updates for instant-feel interactions** — for likes, comments, bookmarks, toggles, etc. See [Optimistic updates](#optimistic-updates) section for the pattern.
 - **Wouter `<Link>` renders an `<a>` tag** — never put an `<a>` inside a `<Link>`. Use `<Link to="/path"><span>...</span></Link>` or `<Link to="/path" className="...">text</Link>` instead.
 
 ## Project Structure
@@ -177,23 +178,22 @@ createUser.mutate({ name: "Alice", email: "alice@example.com" });
 
 ### Optimistic updates
 
-For predictable mutations (deletes, toggles, status changes) — update UI instantly, revert on error.
+For any instant-feel mutation, follow this pattern (e.g. likes, deletes, toggles):
 
 ```tsx
-const queryClient = useQueryClient();
-const deleteTodo = useMutation({
-  mutationFn: async (id: string) => {
-    await api.todos[":id"].$delete({ param: { id } });
+const toggleLike = useMutation({
+  mutationFn: async (postId: string) => {
+    await api.posts[":id"].like.$post({ param: { id: postId } });
   },
-  onMutate: async (id) => {
-    const prev = queryClient.getQueryData(["todos"]);
-    queryClient.setQueryData(["todos"], (old: any) =>
-      old?.filter((t: any) => t.id !== id)
+  onMutate: async (postId) => {
+    await queryClient.cancelQueries({ queryKey: ["posts"] });
+    const prev = queryClient.getQueryData(["posts"]);
+    queryClient.setQueryData(["posts"], (old: any) =>
+      old?.map((p: any) => p.id === postId ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p)
     );
     return { prev };
   },
-  onError: (_err, _id, context) => {
-    queryClient.setQueryData(["todos"], context?.prev);
-  },
+  onError: (_err, _id, ctx) => queryClient.setQueryData(["posts"], ctx?.prev),
+  onSettled: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
 });
 ```
