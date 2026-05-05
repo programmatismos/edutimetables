@@ -30,7 +30,7 @@ packages/web/
   vite/plugins/
     hono-dev-plugin.ts           Serves Hono API in dev via Vite middleware
     runable-analytics-plugin.ts  Injects analytics script
-  website.config.json            Website metadata (hostname, port)
+
   src/
     api/                         Backend source
       index.ts                   Hono routes + AppType export
