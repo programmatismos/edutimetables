@@ -4,7 +4,10 @@
 
 `packages/mobile` is an Expo + React Native app with expo-router (file-based routing), `hono/client` for typed API calls, and `@tanstack/react-query` for queries and mutations.
 
-When creating an app, update `app.json` → `expo.name` and `expo.slug` to the app's name (e.g. `"name": "My App"`, `"slug": "my-app"`). Always update `app/index.tsx` to reflect the new app's UI.
+When creating an app, update `app.json`:
+- Set `expo.name` and `expo.slug` to the app's name (e.g. `"name": "My App"`, `"slug": "my-app"`).
+- Generate `ios.bundleIdentifier` and `android.package` using the format `com.<appname>_<shortid>.runable` where `<shortid>` is a random 4-char alphanumeric string (e.g. `com.myapp_a3x9.runable`).
+- Always update `app/index.tsx` to reflect the new app's UI.
 
 ### Dev Server
 
