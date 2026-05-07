@@ -142,6 +142,24 @@ const app = new Hono()
   .get("/health", (c) => c.json({ status: "ok" }, 200));
 ```
 
+## Auth & Protected Routes
+
+For user-specific data, roles, or access control, use Better Auth (see [authentication.md](authentication.md)). Apply `authMiddleware` to populate `c.get("user")`, then `requireAuth` on protected routes:
+
+```ts
+import { authMiddleware, requireAuth } from "./middleware/auth";
+
+const app = new Hono()
+  .basePath("api")
+  .use("*", authMiddleware)
+  .get("/profile", requireAuth, async (c) => {
+    const user = c.get("user");
+    return c.json({ user }, 200);
+  });
+```
+
+All user-scoped queries should filter by `user.id` from the session.
+
 ## Environment Variables
 
 API-only (unprefixed): `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `BETTER_AUTH_SECRET`, `AI_GATEWAY_BASE_URL`, `AI_GATEWAY_API_KEY`, `AUTUMN_SECRET_KEY`.
