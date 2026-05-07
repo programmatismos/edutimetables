@@ -16,9 +16,10 @@ export default function runableAnalyticsPlugin(): Plugin {
 			// Runable script
 			const script = doc.createElement("script");
 			script.defer = true;
-			script.src = "./runable.js";
+			script.src = "https://assets.onedollarstats.com/stonks.js";
 			script.dataset.hostname = hostname;
 			script.dataset.url = "https://r.lilstts.com/events";
+			if (hostname === "localhost") script.dataset.devmode = "true";
 			head.appendChild(script);
 
 			return dom.serialize();
