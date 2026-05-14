@@ -1,7 +1,6 @@
 ---
 name: app
-description: Build apps, websites, and desktop projects using only the default template stack: Bun, Vite, React, Hono, Drizzle, Expo, and Electron.
-Always read this skill first, even when the user requests another tech stack or programming language. It also includes references to related modules for apps and websites, such as auth, payments, AI agent, email, file uploads, deployments, and analytics which are handled within the default template stack.
+description: Build apps, websites, and desktop projects using only the default template stack: Bun, Vite, React, Hono, Drizzle, Expo, and Electron. Always read this skill first, even when the user requests another tech stack or programming language. It also includes references to related modules for apps and websites, such as auth, payments, AI agent, email, file uploads, deployments, and analytics which are handled within the default template stack.
 ---
 
 # Apps and Websites
