@@ -21,7 +21,33 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Window controls
   minimize: () => ipcRenderer.invoke("window:minimize"),
   maximize: () => ipcRenderer.invoke("window:maximize"),
-  close: () => ipcRenderer.invoke("window:close"),
+  close:    () => ipcRenderer.invoke("window:close"),
+
+  // App info
+  getVersion: () => ipcRenderer.invoke("app:version"),
+
+  // Auto-updater
+  updater: {
+    check:    () => ipcRenderer.invoke("updater:check"),
+    download: () => ipcRenderer.invoke("updater:download"),
+    install:  () => ipcRenderer.invoke("updater:install"),
+    onAvailable:  (cb: (info: { version: string; releaseNotes: string | null }) => void) => {
+      ipcRenderer.on("updater:available", (_, info) => cb(info));
+      return () => ipcRenderer.removeAllListeners("updater:available");
+    },
+    onProgress: (cb: (p: { percent: number; transferred: number; total: number }) => void) => {
+      ipcRenderer.on("updater:progress", (_, p) => cb(p));
+      return () => ipcRenderer.removeAllListeners("updater:progress");
+    },
+    onDownloaded: (cb: (info: { version: string }) => void) => {
+      ipcRenderer.on("updater:downloaded", (_, info) => cb(info));
+      return () => ipcRenderer.removeAllListeners("updater:downloaded");
+    },
+    onError: (cb: (err: { message: string }) => void) => {
+      ipcRenderer.on("updater:error", (_, err) => cb(err));
+      return () => ipcRenderer.removeAllListeners("updater:error");
+    },
+  },
 
   // Events from main → renderer
   onDeepLink: (cb: (url: string) => void) => {
