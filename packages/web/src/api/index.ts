@@ -16,6 +16,10 @@ seedIfEmpty();
 const app = new Hono()
   .basePath("api")
   .use(cors({ origin: "*" }))
+  .onError((err, c) => {
+    console.error("[API Error]", err);
+    return c.json({ error: err.message || "Internal server error", stack: err.stack }, 500);
+  })
   .get("/health", (c) => c.json({ status: "ok" }, 200))
   .route("/school", schoolRoutes)
   .route("/shifts", shiftsRoutes)

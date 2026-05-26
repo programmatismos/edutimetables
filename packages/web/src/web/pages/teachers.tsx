@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState, useRef } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
@@ -134,15 +134,17 @@ export default function TeachersPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      if (editing) return (await (api.teachers as any)[":id"].$put({ param: { id: String(editing.id) }, json: form })).json();
-      return (await api.teachers.$post({ json: form })).json();
+      if (editing) return safeJson((api.teachers as any)[":id"].$put({ param: { id: String(editing.id) }, json: form }));
+      return safeJson(api.teachers.$post({ json: form }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["teachers"] }); setOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const del = useMutation({
-    mutationFn: async (id: number) => (await (api.teachers as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.teachers as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["teachers"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const openUnavail = async (t: Teacher) => {
@@ -161,8 +163,7 @@ export default function TeachersPage() {
         shiftId: unavailForm.shiftId ? parseInt(unavailForm.shiftId) : null,
         reason: unavailForm.reason || null,
       };
-      const res = await (api.teachers as any)[":id"].unavailable.$post({ param: { id: String(selectedTeacher.id) }, json: payload });
-      return res.json();
+      return safeJson((api.teachers as any)[":id"].unavailable.$post({ param: { id: String(selectedTeacher.id) }, json: payload }));
     },
     onSuccess: async () => {
       if (!selectedTeacher) return;
@@ -171,6 +172,7 @@ export default function TeachersPage() {
       setUnavailList((data as any).unavailable || []);
       setUnavailForm({ date: "", shiftId: "", reason: "" });
     },
+    onError: (err: any) => alert(`Σφάλμα αδυναμίας: ${err?.message || JSON.stringify(err)}`),
   });
 
   const deleteUnavail = async (uid: number) => {

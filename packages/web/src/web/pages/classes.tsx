@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
@@ -43,15 +43,17 @@ export default function ClassesPage() {
     mutationFn: async () => {
       const label = buildLabel(form.grade, form.department, form.schoolType);
       const data = { ...form, label, gradeOrder: gradeOrders[form.grade] || 1 };
-      if (editing) return (await (api.classes as any)[":id"].$put({ param: { id: String(editing.id) }, json: data })).json();
-      return (await api.classes.$post({ json: data })).json();
+      if (editing) return safeJson((api.classes as any)[":id"].$put({ param: { id: String(editing.id) }, json: data }));
+      return safeJson(api.classes.$post({ json: data }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["classes"] }); setOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const del = useMutation({
-    mutationFn: async (id: number) => (await (api.classes as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.classes as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["classes"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const gradeVariants: Record<string, "blue" | "yellow" | "red"> = { "Α": "blue", "Β": "yellow", "Γ": "red" };

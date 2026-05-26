@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
@@ -175,8 +175,7 @@ export default function SchedulePage() {
   const generate = useMutation({
     mutationFn: async () => {
       setGenerating(true);
-      const res = await (api.generate as any).$post({ json: { clearManual: true } });
-      return res.json();
+      return safeJson((api.generate as any).$post({ json: { clearManual: true } }));
     },
     onSuccess: (data) => {
       setGenerating(false);
@@ -184,35 +183,39 @@ export default function SchedulePage() {
       setGenOpen(true);
       qc.invalidateQueries({ queryKey: ["schedule"] });
     },
-    onError: () => setGenerating(false),
+    onError: (err: any) => { setGenerating(false); alert(`Σφάλμα δημιουργίας: ${err?.message || JSON.stringify(err)}`); },
   });
 
   const deleteSlot = useMutation({
-    mutationFn: async (id: number) => (await (api.schedule as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.schedule as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const clearAll = useMutation({
-    mutationFn: async () => (await (api.schedule as any).$delete()).json(),
+    mutationFn: async () => safeJson((api.schedule as any).$delete()),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["schedule"] }); },
+    onError: (err: any) => alert(`Σφάλμα εκκαθάρισης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const saveEdit = useMutation({
     mutationFn: async () => {
       if (!editSlot) return;
-      return (await (api.schedule as any)[":id"].$put({
+      return safeJson((api.schedule as any)[":id"].$put({
         param: { id: String(editSlot.id) },
         json: { ...editForm, isManuallyPlaced: true, supervisorIds: editForm.supervisorIds }
-      })).json();
+      }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["schedule"] }); setEditOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const saveAdd = useMutation({
     mutationFn: async () => {
-      return (await api.schedule.$post({ json: { ...addForm, date: addDate, shiftId: addShiftId, isManuallyPlaced: true, supervisorIds: addForm.supervisorIds } })).json();
+      return safeJson(api.schedule.$post({ json: { ...addForm, date: addDate, shiftId: addShiftId, isManuallyPlaced: true, supervisorIds: addForm.supervisorIds } }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["schedule"] }); setAddOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const openEdit = (slot: ExamSlot) => {

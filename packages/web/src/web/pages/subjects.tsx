@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState, useRef } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
@@ -38,15 +38,17 @@ export default function SubjectsPage() {
   const save = useMutation({
     mutationFn: async () => {
       const data = { ...form, classId: Number(form.classId), presenterId: Number(form.presenterId) || null, durationMinutes: Number(form.durationMinutes), priority: Number(form.priority) };
-      if (editing) return (await (api.subjects as any)[":id"].$put({ param: { id: String(editing.id) }, json: data })).json();
-      return (await api.subjects.$post({ json: data })).json();
+      if (editing) return safeJson((api.subjects as any)[":id"].$put({ param: { id: String(editing.id) }, json: data }));
+      return safeJson(api.subjects.$post({ json: data }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["subjects"] }); setOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const del = useMutation({
-    mutationFn: async (id: number) => (await (api.subjects as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.subjects as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["subjects"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -21,22 +21,23 @@ export default function ShiftsPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      if (editing) {
-        return (await (api.shifts as any)[":id"].$put({ param: { id: String(editing.id) }, json: form })).json();
-      }
-      return (await api.shifts.$post({ json: form })).json();
+      if (editing) return safeJson((api.shifts as any)[":id"].$put({ param: { id: String(editing.id) }, json: form }));
+      return safeJson(api.shifts.$post({ json: form }));
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["shifts"] }); setOpen(false); },
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const del = useMutation({
-    mutationFn: async (id: number) => (await (api.shifts as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.shifts as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shifts"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const seedDefaults = useMutation({
-    mutationFn: async () => (await (api.shifts as any)["seed-defaults"].$post()).json(),
+    mutationFn: async () => safeJson((api.shifts as any)["seed-defaults"].$post()),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["shifts"] }),
+    onError: (err: any) => alert(`Σφάλμα προεπιλογών: ${err?.message || JSON.stringify(err)}`),
   });
 
   return (

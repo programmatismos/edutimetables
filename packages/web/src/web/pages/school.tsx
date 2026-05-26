@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../lib/api";
+import { api, safeJson } from "../lib/api";
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
@@ -31,26 +31,30 @@ export default function SchoolPage() {
   }, [schoolData]);
 
   const saveSchool = useMutation({
-    mutationFn: async () => (await api.school.$post({ json: form })).json(),
+    mutationFn: async () => safeJson(api.school.$post({ json: form })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["school"] }),
+    onError: (err: any) => alert(`Σφάλμα αποθήκευσης: ${err?.message || JSON.stringify(err)}`),
   });
 
   const addUnavail = useMutation({
-    mutationFn: async () => (await api.school.unavailable.$post({ json: unavailForm })).json(),
+    mutationFn: async () => safeJson(api.school.unavailable.$post({ json: unavailForm })),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["school-unavail"] }); setAddUnavailOpen(false); setUnavailForm({ date: "", reason: "" }); },
+    onError: (err: any) => alert(`Σφάλμα αδυναμίας: ${err?.message || JSON.stringify(err)}`),
   });
 
   const deleteUnavail = useMutation({
-    mutationFn: async (id: number) => (await (api.school.unavailable as any)[":id"].$delete({ param: { id: String(id) } })).json(),
+    mutationFn: async (id: number) => safeJson((api.school.unavailable as any)[":id"].$delete({ param: { id: String(id) } })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["school-unavail"] }),
+    onError: (err: any) => alert(`Σφάλμα διαγραφής: ${err?.message || JSON.stringify(err)}`),
   });
 
   const resetToDefaults = useMutation({
-    mutationFn: async () => (await api.reset.$post()).json(),
+    mutationFn: async () => safeJson(api.reset.$post()),
     onSuccess: () => {
       setResetConfirmOpen(false);
       qc.invalidateQueries();
     },
+    onError: (err: any) => alert(`Σφάλμα επαναφοράς: ${err?.message || JSON.stringify(err)}`),
   });
 
   return (
