@@ -3,8 +3,8 @@ name: Build Desktop App
 on:
   push:
     tags:
-      - "v*"          # trigger on v1.0.0, v1.2.3, etc.
-  workflow_dispatch:  # allow manual trigger from GitHub UI
+      - "v*"
+  workflow_dispatch:
 
 jobs:
   build-windows:
@@ -37,8 +37,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: EduTimetables-Windows
-          path: packages/desktop/dist/*.exe
+          files: packages/desktop/dist/*.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
