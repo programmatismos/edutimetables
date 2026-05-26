@@ -200,6 +200,15 @@ function createWindow() {
   } else {
     win.loadURL(`http://127.0.0.1:${apiPort}`);
   }
+
+  // F12 toggles DevTools (useful for debugging in production)
+  win.webContents.on("before-input-event", (_e, input) => {
+    if (input.key === "F12" && input.type === "keyDown") {
+      win?.webContents.isDevToolsOpened()
+        ? win.webContents.closeDevTools()
+        : win?.webContents.openDevTools();
+    }
+  });
 }
 
 // ─── Auto-updater ─────────────────────────────────────────────────────────────
