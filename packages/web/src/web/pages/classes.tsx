@@ -18,7 +18,7 @@ const gradeOrders: Record<string, number> = { "Α": 1, "Β": 2, "Γ": 3 };
 
 export default function ClassesPage() {
   const qc = useQueryClient();
-  const classes = useQuery({ queryKey: ["classes"], queryFn: async () => (await api.classes.$get()).json() });
+  const classes = useQuery({ queryKey: ["classes"], queryFn: async () => safeJson(api.classes.$get()) });
   const classList: Class[] = (classes.data as any)?.classes || [];
 
   const [open, setOpen] = useState(false);
@@ -75,6 +75,10 @@ export default function ClassesPage() {
 
       {classes.isLoading ? (
         <div className="text-sm" style={{ color: "var(--text-muted)" }}>Φόρτωση...</div>
+      ) : classes.isError ? (
+        <div className="rounded-xl p-4 text-sm" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--danger)" }}>
+          Σφάλμα φόρτωσης: {(classes.error as any)?.message}
+        </div>
       ) : classList.length === 0 ? (
         <div className="rounded-xl p-10 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <GraduationCap size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />

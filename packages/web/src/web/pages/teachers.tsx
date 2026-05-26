@@ -105,7 +105,7 @@ function emptyForm() {
 
 export default function TeachersPage() {
   const qc = useQueryClient();
-  const teachers = useQuery({ queryKey: ["teachers"], queryFn: async () => (await api.teachers.$get()).json() });
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: async () => safeJson(api.teachers.$get()) });
   const teacherList: Teacher[] = (teachers.data as any)?.teachers || [];
 
   const [open, setOpen] = useState(false);
@@ -116,7 +116,7 @@ export default function TeachersPage() {
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [unavailList, setUnavailList] = useState<TeacherUnavailable[]>([]);
   const [unavailForm, setUnavailForm] = useState({ date: "", shiftId: "" as string, reason: "" });
-  const shifts = useQuery({ queryKey: ["shifts"], queryFn: async () => (await (api as any).shifts.$get()).json() });
+  const shifts = useQuery({ queryKey: ["shifts"], queryFn: async () => safeJson((api as any).shifts.$get()) });
   const shiftList: Shift[] = (shifts.data as any)?.shifts || [];
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -252,6 +252,8 @@ export default function TeachersPage() {
           <tbody>
             {teachers.isLoading ? (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>Φόρτωση...</td></tr>
+            ) : teachers.isError ? (
+              <tr><td colSpan={5} className="px-4 py-4 text-sm" style={{ color: "var(--danger)" }}>Σφάλμα φόρτωσης: {(teachers.error as any)?.message}</td></tr>
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-12 text-center">

@@ -8,8 +8,8 @@ import { Plus, Trash2, Save, School, CalendarOff, RotateCcw } from "lucide-react
 
 export default function SchoolPage() {
   const qc = useQueryClient();
-  const school = useQuery({ queryKey: ["school"], queryFn: async () => (await api.school.$get()).json() });
-  const unavail = useQuery({ queryKey: ["school-unavail"], queryFn: async () => (await api.school.unavailable.$get()).json() });
+  const school = useQuery({ queryKey: ["school"], queryFn: async () => safeJson(api.school.$get()) });
+  const unavail = useQuery({ queryKey: ["school-unavail"], queryFn: async () => safeJson(api.school.unavailable.$get()) });
 
   const schoolData = (school.data as any)?.school;
   const unavailList = (unavail.data as any)?.unavailable || [];

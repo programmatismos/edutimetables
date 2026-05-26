@@ -9,7 +9,7 @@ import type { Shift } from "../types";
 
 export default function ShiftsPage() {
   const qc = useQueryClient();
-  const shifts = useQuery({ queryKey: ["shifts"], queryFn: async () => (await api.shifts.$get()).json() });
+  const shifts = useQuery({ queryKey: ["shifts"], queryFn: async () => safeJson(api.shifts.$get()) });
   const shiftList: Shift[] = (shifts.data as any)?.shifts || [];
 
   const [open, setOpen] = useState(false);
@@ -62,6 +62,10 @@ export default function ShiftsPage() {
       <div className="space-y-3">
         {shifts.isLoading ? (
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>Φόρτωση...</div>
+        ) : shifts.isError ? (
+          <div className="rounded-xl p-4 text-sm" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--danger)" }}>
+            Σφάλμα φόρτωσης: {(shifts.error as any)?.message}
+          </div>
         ) : shiftList.length === 0 ? (
           <div className="rounded-xl p-8 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
             <Clock size={32} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />

@@ -14,9 +14,9 @@ function emptyForm() {
 
 export default function SubjectsPage() {
   const qc = useQueryClient();
-  const subjects = useQuery({ queryKey: ["subjects"], queryFn: async () => (await api.subjects.$get()).json() });
-  const classes = useQuery({ queryKey: ["classes"], queryFn: async () => (await api.classes.$get()).json() });
-  const teachers = useQuery({ queryKey: ["teachers"], queryFn: async () => (await api.teachers.$get()).json() });
+  const subjects = useQuery({ queryKey: ["subjects"], queryFn: async () => safeJson(api.subjects.$get()) });
+  const classes = useQuery({ queryKey: ["classes"], queryFn: async () => safeJson(api.classes.$get()) });
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: async () => safeJson(api.teachers.$get()) });
 
   const subjectList: Subject[] = (subjects.data as any)?.subjects || [];
   const classList: Class[] = (classes.data as any)?.classes || [];
@@ -125,6 +125,10 @@ export default function SubjectsPage() {
 
       {subjects.isLoading ? (
         <div className="text-sm" style={{ color: "var(--text-muted)" }}>Φόρτωση...</div>
+      ) : subjects.isError ? (
+        <div className="rounded-xl p-4 text-sm" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--danger)" }}>
+          Σφάλμα φόρτωσης: {(subjects.error as any)?.message}
+        </div>
       ) : subjectList.length === 0 ? (
         <div className="rounded-xl p-10 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
           <BookOpen size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
