@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from "electron";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
@@ -81,7 +81,7 @@ async function startServer(): Promise<number> {
   // Import the pre-bundled API server (built by esbuild in CI)
   // Path: dist-electron/api-server.cjs (sibling to main.js)
   const serverModulePath = path.join(__dirname, "api-server.cjs");
-  const { default: honoApp } = await import(serverModulePath);
+  const { default: honoApp } = await import(pathToFileURL(serverModulePath).href);
 
   return new Promise((resolve, reject) => {
     const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
