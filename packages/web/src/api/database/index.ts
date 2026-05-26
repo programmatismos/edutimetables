@@ -7,7 +7,11 @@
  * which main.ts sets before importing api-server.cjs.
  */
 
+import { createRequire } from "node:module";
 import * as schema from "./schema";
+
+// createRequire works in both CJS (Electron bundle) and ESM (Vite SSR dev)
+const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
 
 // Lazy singleton
 let _db: any = null;
@@ -19,16 +23,16 @@ function getDb() {
 
   if (sqlitePath) {
     // ── Electron: better-sqlite3 (pure sync, no native module loader issues)
-    const Database = require("better-sqlite3");
-    const { drizzle } = require("drizzle-orm/better-sqlite3");
+    const Database = _require("better-sqlite3");
+    const { drizzle } = _require("drizzle-orm/better-sqlite3");
     const sqlite = new Database(sqlitePath);
     // WAL mode for better concurrent read performance
     sqlite.pragma("journal_mode = WAL");
     _db = drizzle(sqlite, { schema });
   } else {
-    // ── Web / remote Turso
-    const { createClient } = require("@libsql/client");
-    const { drizzle } = require("drizzle-orm/libsql");
+    // ── Web / dev / remote Turso
+    const { createClient } = _require("@libsql/client");
+    const { drizzle } = _require("drizzle-orm/libsql");
     const client = createClient({
       url: process.env.DATABASE_URL!,
       authToken: process.env.DATABASE_AUTH_TOKEN,
