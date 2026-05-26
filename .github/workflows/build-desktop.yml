@@ -1,0 +1,44 @@
+name: Build Desktop App
+
+on:
+  push:
+    tags:
+      - "v*"          # trigger on v1.0.0, v1.2.3, etc.
+  workflow_dispatch:  # allow manual trigger from GitHub UI
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build web app
+        run: bun run build
+        working-directory: packages/web
+
+      - name: Copy web dist to desktop
+        shell: bash
+        run: cp -r packages/web/dist packages/desktop/web-dist
+
+      - name: Build Electron
+        run: bun run build
+        working-directory: packages/desktop
+
+      - name: Package Windows .exe
+        run: npx electron-builder --win --x64 --config electron-builder.yml
+        working-directory: packages/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EduTimetables-Windows
+          path: packages/desktop/dist/*.exe

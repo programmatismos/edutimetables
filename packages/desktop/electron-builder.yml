@@ -5,7 +5,7 @@ copyright: Copyright © 2026
 # Point to your GitHub repo — change owner/repo
 publish:
   provider: github
-  owner: YOUR_GITHUB_USERNAME
+  owner: programmatismos
   repo: edutimetables
   releaseType: release   # only published (non-draft) releases trigger updates
 
