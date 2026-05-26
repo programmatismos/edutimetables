@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { Calendar, Users, BookOpen, GraduationCap, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { Calendar, Users, BookOpen, GraduationCap, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
+import { parseSupervisorIds } from "../lib/utils";
 
 export default function DashboardPage() {
   const school = useQuery({ queryKey: ["school"], queryFn: async () => (await api.school.$get()).json() });
@@ -22,7 +23,10 @@ export default function DashboardPage() {
   // Supervision counts
   const supCounts: Record<number, number> = {};
   for (const slot of scheduleList) {
-    const ids: number[] = JSON.parse(slot.supervisorIds || "[]");
+    // Το dashboard δεν πρέπει να χαλάει από μία παλιά ή κατεστραμμένη τιμή
+    // supervisorIds. Ο κοινός parser επιστρέφει ασφαλή κενή λίστα και έτσι
+    // οι μετρήσεις επιτηρήσεων συνεχίζουν να εμφανίζονται ακόμα και με κακό row.
+    const ids = parseSupervisorIds(slot.supervisorIds);
     const weight = slot.subject?.durationMinutes >= 180 ? 1.5 : 1;
     for (const id of ids) {
       supCounts[id] = (supCounts[id] || 0) + weight;

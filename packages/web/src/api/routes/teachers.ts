@@ -8,6 +8,22 @@ export const teachersRoutes = new Hono()
     const rows = await db.select().from(schema.teachers).orderBy(asc(schema.teachers.lastName));
     return c.json({ teachers: rows }, 200);
   })
+  // Οι στατικές διαδρομές μπαίνουν πριν από το "/:id", αλλιώς ο Hono router
+  // μπορεί να διαβάσει το "import" σαν ID καθηγητή και να επιστρέψει λάθος route.
+  .post("/import", async (c) => {
+    const body = await c.req.json();
+    const { teachers: list } = body;
+    const sanitized = list.map((t: any) => ({ ...t, specialty: t.specialty || "ΠΕ00" }));
+    const inserted = await db.insert(schema.teachers).values(sanitized).returning();
+    return c.json({ teachers: inserted, count: inserted.length }, 201);
+  })
+  // All teacher unavailabilities (for schedule conflict detection)
+  // Χρησιμοποιείται από το πρόγραμμα για να ελέγχει συγκρούσεις σε όλες τις
+  // επιτηρήσεις, όχι μόνο για έναν συγκεκριμένο καθηγητή.
+  .get("/all-unavailable", async (c) => {
+    const rows = await db.select().from(schema.teacherUnavailable);
+    return c.json({ unavailable: rows }, 200);
+  })
   .get("/:id", async (c) => {
     const id = parseInt(c.req.param("id"));
     const [row] = await db.select().from(schema.teachers).where(eq(schema.teachers.id, id));
@@ -34,18 +50,6 @@ export const teachersRoutes = new Hono()
     const id = parseInt(c.req.param("id"));
     await db.delete(schema.teachers).where(eq(schema.teachers.id, id));
     return c.json({ ok: true }, 200);
-  })
-  .post("/import", async (c) => {
-    const body = await c.req.json();
-    const { teachers: list } = body;
-    const sanitized = list.map((t: any) => ({ ...t, specialty: t.specialty || "ΠΕ00" }));
-    const inserted = await db.insert(schema.teachers).values(sanitized).returning();
-    return c.json({ teachers: inserted, count: inserted.length }, 201);
-  })
-  // All teacher unavailabilities (for schedule conflict detection)
-  .get("/all-unavailable", async (c) => {
-    const rows = await db.select().from(schema.teacherUnavailable);
-    return c.json({ unavailable: rows }, 200);
   })
   // Unavailability
   .get("/:id/unavailable", async (c) => {

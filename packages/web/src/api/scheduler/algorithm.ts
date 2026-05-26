@@ -1,5 +1,5 @@
 /**
- * EduTimetables — Backtracking CSP Exam Scheduler
+ * EduTimetables, Backtracking CSP Exam Scheduler
  *
  * Variables:    One per subject (what slot to assign)
  * Domain:       All (date, shift) combinations within exam period
@@ -10,15 +10,15 @@
  *   H4. Same class already has exam that day (max 1/day per class)
  *   H5. Presenter already presenting in that shift (another subject)
  *   H6. Presenter assigned as supervisor in that shift (conflict of roles)
- * Soft constraints (domain ordering heuristic — prefer but don't enforce):
+ * Soft constraints (domain ordering heuristic, prefer but don't enforce):
  *   S1. Γ' τάξη exams early in period
- *   S2. Gap ("ανάσα") between exams of same class — penalise consecutive days
+ *   S2. Gap ("ανάσα") between exams of same class, penalise consecutive days
  *   S3. Specialties of same grade on same date when possible (not enforced, just preferred)
  *   S4. Supervisor load balance (3h = 1.5× weight)
  *   S5. Avoid teacher supervising twice in same day
  *
- * Variable ordering: MRV (Minimum Remaining Values) — schedule the hardest-to-place subject first.
- * Value ordering:    Least-constraining value — prefer slots that leave most options open.
+ * Variable ordering: MRV (Minimum Remaining Values), schedule the hardest-to-place subject first.
+ * Value ordering:    Least-constraining value, prefer slots that leave most options open.
  * Forward checking:  After each assignment, eliminate values from remaining variables' domains.
  */
 
@@ -59,7 +59,7 @@ export interface SchedulerResult {
   unscheduled: number[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Βοηθητικές συναρτήσεις ημερομηνιών.
 
 function getWorkingDates(start: string, end: string, unavailable: Set<string>): string[] {
   const dates: string[] = [];
@@ -77,13 +77,16 @@ function getWorkingDates(start: string, end: string, unavailable: Set<string>): 
 type Slot = { date: string; shiftId: number };
 type Assignment = Map<number, Slot>; // subjectId → slot
 
-// ─── State used during search ─────────────────────────────────────────────────
+// Κατάσταση που χρησιμοποιείται μέσα στην αναζήτηση του scheduler.
 
 interface SearchState {
-  // Which (date, shiftId) each classId already occupies
+  // Ποια ημερομηνία και βάρδια έχει ήδη δεσμεύσει κάθε τάξη.
   classShift: Map<string, number>;   // key: `${classId}_${date}_${shiftId}` → subjectId
   classDay:   Map<string, number>;   // key: `${classId}_${date}` → count
   presenterShift: Map<string, number>; // key: `${presenterId}_${date}_${shiftId}` → subjectId
+  // Κρατάμε επιτήρηση ανά ακριβή βάρδια, όχι μόνο ανά ημέρα. Χωρίς αυτό,
+  // ο ίδιος καθηγητής μπορούσε να τοποθετηθεί σε δύο ταυτόχρονες επιτηρήσεις.
+  supervisorShift: Map<string, number>; // key: `${teacherId}_${date}_${shiftId}` → subjectId
   // Supervision hours per teacher
   supHours: Map<number, number>;
   // Supervision per teacher per day
@@ -95,12 +98,13 @@ function cloneState(s: SearchState): SearchState {
     classShift:     new Map(s.classShift),
     classDay:       new Map(s.classDay),
     presenterShift: new Map(s.presenterShift),
+    supervisorShift: new Map(s.supervisorShift),
     supHours:       new Map(s.supHours),
     supDay:         new Map(s.supDay),
   };
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// Κύρια συνάρτηση δημιουργίας προγράμματος.
 
 export function runScheduler(input: SchedulerInput): SchedulerResult {
   const { school, shifts, schoolUnavailable, teachers, teacherUnavailable, subjects, splitThreshold = 25 } = input;
@@ -116,8 +120,8 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     return { slots: [], score: 0, violations: ["Δεν υπάρχουν διαθέσιμες εργάσιμες μέρες στην εξεταστική"], unscheduled: subjects.map(s => s.id) };
   }
 
-  // Teacher unavailability — support whole-day (shiftId=null) and shift-specific
-  // Key: teacherId -> Set of "date" or "date|shiftId"
+  // Οι αδυναμίες καθηγητών υποστηρίζουν είτε ολόκληρη ημέρα είτε συγκεκριμένη βάρδια.
+  // Το map κρατά χωριστά τις ημερήσιες και τις ανά βάρδια αδυναμίες για γρήγορο έλεγχο.
   const teacherUnavailMap = new Map<number, { wholeDays: Set<string>; shiftSlots: Set<string> }>();
   for (const tu of teacherUnavailable as Array<{ teacherId: number; date: string; shiftId?: number | null }>) {
     if (!teacherUnavailMap.has(tu.teacherId)) teacherUnavailMap.set(tu.teacherId, { wholeDays: new Set(), shiftSlots: new Set() });
@@ -135,8 +139,6 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     return entry.wholeDays.has(date) || entry.shiftSlots.has(`${date}|${shiftId}`);
   }
 
-  const teacherMap = new Map(teachers.map(t => [t.id, t]));
-
   // All possible slots
   const allSlots: Slot[] = [];
   for (const date of workingDates) {
@@ -145,8 +147,8 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     }
   }
 
-  // ── Initial domain per subject ──────────────────────────────────────────────
-  // Filter out slots where presenter is unavailable right away
+  // Αρχικό domain για κάθε μάθημα.
+  // Κόβουμε εξαρχής τα slots όπου ο εισηγητής έχει δηλώσει αδυναμία.
   function initialDomain(subject: typeof subjects[0]): Slot[] {
     return allSlots.filter(slot => {
       // Presenter available
@@ -155,8 +157,8 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     });
   }
 
-  // ── Variable ordering ───────────────────────────────────────────────────────
-  // Sort subjects: Γ grade first, then fewest initial domain values (MRV)
+  // Σειρά επιλογής μεταβλητών.
+  // Μπαίνουν πρώτα τα μαθήματα της Γ τάξης και μετά όσα έχουν τα λιγότερα διαθέσιμα slots.
   const domainSizes = new Map<number, number>();
   for (const s of subjects) {
     domainSizes.set(s.id, initialDomain(s).length);
@@ -175,11 +177,19 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     return a.priority - b.priority;
   });
 
-  // ── Constraint check ────────────────────────────────────────────────────────
+  function needsSplit(subject: typeof subjects[0]): boolean {
+    // Υπολογίζουμε το split πριν από το backtracking, ώστε ο αλγόριθμος να μην
+    // αποδεχτεί slot split μαθήματος αν δεν υπάρχουν δύο διαθέσιμοι επιτηρητές.
+    if (!subject.canSplit) return false;
+    const cls = subject.class;
+    if (!cls) return false;
+    return cls.forceSplit || (cls.studentCount > splitThreshold);
+  }
+
+  // Έλεγχος σκληρών περιορισμών για ένα πιθανό slot.
   function isConsistent(
     subject: typeof subjects[0],
     slot: Slot,
-    assignment: Assignment,
     state: SearchState
   ): boolean {
     const { date, shiftId } = slot;
@@ -193,12 +203,15 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     // H5 + H6: presenter conflict
     if (subject.presenterId) {
       if (state.presenterShift.has(`${subject.presenterId}_${date}_${shiftId}`)) return false;
+      // Ο εισηγητής δεν επιτρέπεται να είναι ήδη επιτηρητής σε άλλο μάθημα
+      // της ίδιας βάρδιας, γιατί αυτό είναι πραγματική χρονική σύγκρουση.
+      if (state.supervisorShift.has(`${subject.presenterId}_${date}_${shiftId}`)) return false;
     }
 
     return true;
   }
 
-  // ── Supervisor selection ────────────────────────────────────────────────────
+  // Επιλογή επιτηρητών για το συγκεκριμένο μάθημα και slot.
   function pickSupervisors(
     subject: typeof subjects[0],
     slot: Slot,
@@ -207,14 +220,6 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     const { date, shiftId } = slot;
     const presenterSpecialty = subject.presenter?.specialty ?? subject.specialty;
     const isSpecialty = subject.subjectType === "specialty";
-    const weight = subject.durationMinutes >= 180 ? 1.5 : 1;
-
-    // Find teachers already supervising in this shift (can't do two at once)
-    const supervisingInShift = new Set<number>();
-    // We'll compute this from supDay — if they have a supervision in this exact shift
-    // we track it by checking presenterShift and a supervisorShift map
-    // For simplicity: build from current state's supDay with shift granularity
-    // (We store shift-level info in presenterShift; for supervisors we use supDay as proxy)
 
     const eligible = teachers.filter(t => {
       if (t.id === subject.presenterId) return false;
@@ -225,6 +230,11 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
       if (isSpecialty && presenterSpecialty && t.specialty === presenterSpecialty) return false;
       // Already presenting in this shift
       if (state.presenterShift.has(`${t.id}_${date}_${shiftId}`)) return false;
+      // Already supervising in this shift
+      // Αποκλείουμε καθηγητή που έχει ήδη επιλεγεί ως επιτηρητής στην ίδια
+      // ημερομηνία/βάρδια, αλλά συνεχίζουμε να επιτρέπουμε δεύτερη επιτήρηση
+      // άλλη ώρα της ίδιας μέρας ώστε να λειτουργεί η ισοκατανομή.
+      if (state.supervisorShift.has(`${t.id}_${date}_${shiftId}`)) return false;
       return true;
     });
 
@@ -238,13 +248,11 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     return eligible.slice(0, 2).map(t => t.id);
   }
 
-  // ── Value ordering (Least Constraining Value) ───────────────────────────────
-  // Prefer slots that will remove fewer values from remaining unassigned subjects
-  // Approximation: prefer dates that have fewer existing class assignments
+  // Σειρά δοκιμής slots με λογική Least Constraining Value.
+  // Προτιμάμε slots που περιορίζουν λιγότερο τα επόμενα μαθήματα της ίδιας τάξης.
   function orderDomain(
     domain: Slot[],
     subject: typeof subjects[0],
-    assignment: Assignment,
     state: SearchState,
     remaining: typeof subjects
   ): Slot[] {
@@ -259,14 +267,14 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
           if (!state.classDay.has(`${other.classId}_${b.date}`)) constrainsB++;
         }
       }
-      // Also prefer earlier dates for Γ grade (soft S1)
+      // Προτιμάμε νωρίτερες ημερομηνίες ως ήπιο κριτήριο για τα πιο κρίσιμα μαθήματα.
       const dateA = workingDates.indexOf(a.date);
       const dateB = workingDates.indexOf(b.date);
       return (constrainsA - constrainsB) || (dateA - dateB);
     });
   }
 
-  // ── Apply / undo assignment ─────────────────────────────────────────────────
+  // Εφαρμογή ανάθεσης στο προσωρινό state του backtracking.
   function applyAssignment(
     subject: typeof subjects[0],
     slot: Slot,
@@ -281,13 +289,16 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
     }
     const weight = subject.durationMinutes >= 180 ? 1.5 : 1;
     for (const sid of supervisorIds) {
+      // Η εγγραφή εδώ είναι η πηγή αλήθειας για τους επόμενους ελέγχους
+      // σύγκρουσης επιτηρητών μέσα στο ίδιο κλαδί του backtracking.
+      state.supervisorShift.set(`${sid}_${date}_${shiftId}`, subject.id);
       state.supHours.set(sid, (state.supHours.get(sid) ?? 0) + weight);
       const dk = `${sid}_${date}`;
       state.supDay.set(dk, (state.supDay.get(dk) ?? 0) + 1);
     }
   }
 
-  // ── Backtracking search ─────────────────────────────────────────────────────
+  // Αναδρομική αναζήτηση backtracking.
   const finalAssignment: Assignment = new Map();
   const finalSupervisors: Map<number, number[]> = new Map();
 
@@ -301,12 +312,16 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
 
     const subject = orderedSubjects[index];
     const domain = initialDomain(subject);
-    const ordered = orderDomain(domain, subject, assignment, state, orderedSubjects.slice(index + 1));
+    const ordered = orderDomain(domain, subject, state, orderedSubjects.slice(index + 1));
 
     for (const slot of ordered) {
-      if (!isConsistent(subject, slot, assignment, state)) continue;
+      if (!isConsistent(subject, slot, state)) continue;
 
       const sups = pickSupervisors(subject, slot, state);
+      // Split μάθημα χωρίς δύο επιτηρητές θα γινόταν αργότερα κανονική
+      // μονή εγγραφή. Το κόβουμε εδώ ώστε το αποτέλεσμα να είναι ειλικρινές.
+      if (needsSplit(subject) && sups.length < 2) continue;
+
       const newState = cloneState(state);
       applyAssignment(subject, slot, sups, newState);
 
@@ -320,31 +335,24 @@ export function runScheduler(input: SchedulerInput): SchedulerResult {
       supervisors.delete(subject.id);
     }
 
-    return false; // no valid slot found — trigger backtrack
+    return false; // Δεν βρέθηκε έγκυρο slot, άρα ενεργοποιείται backtracking.
   }
 
   const initState: SearchState = {
     classShift:     new Map(),
     classDay:       new Map(),
     presenterShift: new Map(),
+    supervisorShift: new Map(),
     supHours:       new Map(teachers.map(t => [t.id, 0])),
     supDay:         new Map(),
   };
 
   const success = backtrack(0, finalAssignment, finalSupervisors, initState);
 
-  // ── Build result ─────────────────────────────────────────────────────────────
+  // Δημιουργία τελικού αποτελέσματος από τις αναθέσεις που βρέθηκαν.
   const slots: ScheduledSlot[] = [];
   const unscheduled: number[] = [];
   const violations: string[] = [];
-
-  // Helper: does this subject/class need split?
-  function needsSplit(subject: typeof subjects[0]): boolean {
-    if (!subject.canSplit) return false;
-    const cls = subject.class;
-    if (!cls) return false;
-    return cls.forceSplit || (cls.studentCount > splitThreshold);
-  }
 
   // Recompute final state for scoring
   const finalState = cloneState(initState);

@@ -28,22 +28,34 @@ function createWindow() {
   }
 }
 
-// ─── Auto-updater (production only) ─────────────────────────────────────────
-// Only runs when packaged — skipped in dev so bun dev works fine.
+// Auto updater για production.
+// Στο packaged app ενεργοποιείται κανονικά. Στο development καταχωρούμε μόνο
+// ασφαλή no-op handlers, επειδή το preload εκθέτει τα ίδια methods και στα δύο modes.
 function setupAutoUpdater() {
-  if (isDev) return;
+  if (isDev) {
+    // Στο development το preload εκθέτει πάντα updater methods.
+    // Καταχωρούμε no-op handlers για να μην σκάει ο renderer με
+    // "No handler registered" όταν δεν υπάρχει πραγματικός auto-updater.
+    ipcMain.handle("updater:download", () => null);
+    ipcMain.handle("updater:install", () => null);
+    ipcMain.handle("updater:check", () => null);
+    return;
+  }
 
-  // Dynamic import so the dev build doesn't fail if electron-updater
-  // isn't bundled into the renderer side.
+  // Το electron-updater φορτώνεται δυναμικά μόνο στο production.
+  // Έτσι το development build μένει ελαφρύ και δεν απαιτεί πραγματικό updater runtime.
   import("electron-updater").then(({ autoUpdater }) => {
-    // Don't auto-install silently — ask the user first.
+    // Δεν εγκαθιστούμε ενημερώσεις σιωπηλά. Η εγκατάσταση γίνεται μόνο μετά
+    // από ενέργεια του χρήστη μέσα από το UI.
     autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.autoDownload = false; // download only after user confirms
+    autoUpdater.autoDownload = false; // Λήψη μόνο αφού το ζητήσει ο χρήστης.
 
-    // Check for updates 3 seconds after startup (give the window time to load)
+    // Περιμένουμε λίγο μετά την εκκίνηση ώστε να φορτώσει πρώτα το παράθυρο
+    // και μετά ελέγχουμε αν υπάρχει διαθέσιμη ενημέρωση.
     setTimeout(() => autoUpdater.checkForUpdates(), 3000);
 
-    // Also check every 4 hours while the app is running
+    // Κάνουμε περιοδικό έλεγχο όσο η εφαρμογή μένει ανοιχτή, ώστε ο χρήστης
+    // να ενημερώνεται χωρίς να χρειάζεται επανεκκίνηση.
     setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000);
 
     autoUpdater.on("update-available", (info) => {
@@ -54,7 +66,8 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on("update-not-available", () => {
-      // Silently ignore — only notify when triggered manually
+      // Δεν ενοχλούμε τον χρήστη όταν δεν υπάρχει ενημέρωση. Μήνυμα χρειάζεται
+      // μόνο όταν υπάρχει διαθέσιμη έκδοση ή όταν αποτύχει ο updater.
     });
 
     autoUpdater.on("download-progress", (progress) => {
@@ -73,20 +86,20 @@ function setupAutoUpdater() {
       win?.webContents.send("updater:error", { message: err.message });
     });
 
-    // IPC: renderer asks to start download
+    // IPC από τον renderer για έναρξη λήψης ενημέρωσης.
     ipcMain.handle("updater:download", () => autoUpdater.downloadUpdate());
 
-    // IPC: renderer asks to install now (quits & relaunches)
+    // IPC από τον renderer για εγκατάσταση τώρα, η οποία κλείνει και ανοίγει ξανά την εφαρμογή.
     ipcMain.handle("updater:install", () => autoUpdater.quitAndInstall());
 
-    // IPC: renderer manually triggers a check
+    // IPC από τον renderer για χειροκίνητο έλεγχο ενημερώσεων.
     ipcMain.handle("updater:check", () => autoUpdater.checkForUpdates());
   }).catch((err) => {
     console.error("electron-updater failed to load:", err);
   });
 }
 
-// ─── IPC Handlers ─────────────────────────────────────────────────────────────
+// IPC handlers για λειτουργίες παραθύρου, αρχείων και ειδοποιήσεων.
 
 ipcMain.handle("dialog:open", async (_, opts) => {
   const result = await dialog.showOpenDialog(opts);
@@ -117,10 +130,10 @@ ipcMain.handle("window:maximize", () => {
 });
 ipcMain.handle("window:close", () => win?.close());
 
-// Expose current app version to renderer
+// Εκθέτουμε την έκδοση της εφαρμογής στον renderer για προβολή στο UI.
 ipcMain.handle("app:version", () => app.getVersion());
 
-// ─── App lifecycle ────────────────────────────────────────────────────────────
+// Κύκλος ζωής εφαρμογής Electron.
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

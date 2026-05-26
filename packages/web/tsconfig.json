@@ -4,6 +4,11 @@
 		{
 			"path": "./tsconfig.app.json"
 		},
+		// Το API έχει δικό του tsconfig για να typecheckάρονται routes,
+		// scheduler και database schema μαζί με το frontend.
+		{
+			"path": "./tsconfig.api.json"
+		},
 		{
 			"path": "./tsconfig.node.json"
 		}

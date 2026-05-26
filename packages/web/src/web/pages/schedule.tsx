@@ -3,14 +3,14 @@ import { api } from "../lib/api";
 import { useState } from "react";
 import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
-import { Badge } from "../components/ui/Badge";
 import { Select, Input } from "../components/ui/Input";
 import {
-  Wand2, AlertTriangle, CheckCircle2, Trash2, Edit2,
-  Calendar, RefreshCw, Plus, ChevronLeft, ChevronRight, Printer
+  Wand2, AlertTriangle, CheckCircle2, Trash2,
+  Calendar, Plus, ChevronLeft, ChevronRight, Printer
 } from "lucide-react";
 import { Link } from "wouter";
 import type { ExamSlot, Shift, Class, Teacher, Subject } from "../types";
+import { parseSupervisorIds } from "../lib/utils";
 
 const CLASS_COLORS = [
   "#DBEAFE", "#D1FAE5", "#FEF3C7", "#FCE7F3", "#EDE9FE",
@@ -29,9 +29,9 @@ function getDateRange(start: string, end: string): string[] {
 }
 
 const DAY_NAMES = ["Κυρ", "Δευ", "Τρί", "Τετ", "Πέμ", "Παρ", "Σάβ"];
-const DAY_NAMES_FULL = ["Κυριακή", "Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο"];
 
-// ── Conflict detection (same rules as scheduler) ─────────────────────────────
+// Έλεγχος συγκρούσεων για την προβολή του προγράμματος.
+// Οι ίδιοι κανόνες υπάρχουν πλέον και στο backend για να μην αποθηκεύεται άκυρη χειροκίνητη αλλαγή.
 type TeacherUnavailRecord = { teacherId: number; date: string; shiftId: number | null };
 
 function isTeacherUnavailable(teacherId: number, date: string, shiftId: number, teacherUnavail: TeacherUnavailRecord[]): boolean {
@@ -42,19 +42,35 @@ function isTeacherUnavailable(teacherId: number, date: string, shiftId: number, 
   );
 }
 
+function hasSplitNote(slot: Pick<ExamSlot, "notes">): boolean {
+  return typeof slot.notes === "string" && slot.notes.toLowerCase().includes("split");
+}
+
+// Τα split μαθήματα εμφανίζονται ως δύο εγγραφές ίδιας τάξης/ημέρας/βάρδιας,
+// μία για κάθε τμήμα. Αυτό είναι έγκυρο αποτέλεσμα του scheduler, άρα ο
+// frontend έλεγχος συγκρούσεων πρέπει να αγνοεί μόνο αυτό το συγκεκριμένο ζευγάρι.
+function isSplitPair(a: ExamSlot, b: ExamSlot): boolean {
+  return a.subjectId === b.subjectId &&
+    a.date === b.date &&
+    a.shiftId === b.shiftId &&
+    hasSplitNote(a) &&
+    hasSplitNote(b);
+}
+
 function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set<string>, teacherUnavail: TeacherUnavailRecord[] = []): string[] {
   const issues: string[] = [];
   const others = allSlots.filter(s => s.id !== slot.id);
 
-  const supervisorIds: number[] = typeof slot.supervisorIds === "string"
-    ? JSON.parse(slot.supervisorIds) : (slot.supervisorIds || []);
+  // Χρησιμοποιούμε τον κοινό ασφαλή parser ώστε ένα χαλασμένο supervisorIds
+  // στη βάση να μην ρίξει όλη τη σελίδα του προγράμματος.
+  const supervisorIds = parseSupervisorIds(slot.supervisorIds);
 
-  // H1 — Απαγορευμένη ημερομηνία σχολείου
+  // H1, απαγορευμένη ημερομηνία σχολείου.
   if (unavailDates.has(slot.date)) {
     issues.push("Η ημερομηνία είναι αργία/αναστολή");
   }
 
-  // H2 — Εκπαιδευτικός σε αδυναμία (whole-day or specific shift)
+  // H2, εκπαιδευτικός σε αδυναμία για ολόκληρη ημέρα ή για συγκεκριμένη βάρδια.
   if (slot.presenterId && isTeacherUnavailable(slot.presenterId, slot.date, slot.shiftId, teacherUnavail)) {
     issues.push(`Ο εισηγητής ${slot.presenter?.lastName} έχει δηλώσει αδυναμία αυτή την ώρα`);
   }
@@ -65,8 +81,9 @@ function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set
     }
   }
 
-  // H3 — Ίδια τάξη ίδια βάρδια
+  // H3, ίδια τάξη στην ίδια βάρδια.
   const sameClassSameShift = others.filter(s =>
+    !isSplitPair(slot, s) &&
     s.date === slot.date &&
     s.shiftId === slot.shiftId &&
     s.class?.id === slot.class?.id &&
@@ -76,8 +93,9 @@ function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set
     issues.push(`Η τάξη ${slot.class?.label} έχει ήδη εξέταση στην ίδια βάρδια`);
   }
 
-  // H4 — Ίδια τάξη ίδια μέρα (max 1/day)
+  // H4, ίδια τάξη την ίδια μέρα, με εξαίρεση το νόμιμο split ζευγάρι.
   const sameClassSameDay = others.filter(s =>
+    !isSplitPair(slot, s) &&
     s.date === slot.date &&
     s.class?.id === slot.class?.id &&
     slot.class != null
@@ -86,7 +104,7 @@ function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set
     issues.push(`Η τάξη ${slot.class?.label} έχει ήδη εξέταση την ίδια ημέρα`);
   }
 
-  // H5 — Εισηγητής παρουσιάζει αλλού την ίδια βάρδια
+  // H5, εισηγητής παρουσιάζει αλλού την ίδια βάρδια.
   if (slot.presenterId) {
     const presenterBusy = others.filter(s =>
       s.date === slot.date &&
@@ -98,10 +116,10 @@ function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set
     }
   }
 
-  // H6 — Εισηγητής είναι και επιτηρητής αλλού την ίδια βάρδια
+  // H6, εισηγητής είναι και επιτηρητής αλλού την ίδια βάρδια.
   if (slot.presenterId) {
     const presenterAsSup = others.filter(s => {
-      const ids: number[] = typeof s.supervisorIds === "string" ? JSON.parse(s.supervisorIds) : (s.supervisorIds || []);
+      const ids = parseSupervisorIds(s.supervisorIds);
       return s.date === slot.date && s.shiftId === slot.shiftId && ids.includes(slot.presenterId!);
     });
     if (presenterAsSup.length > 0) {
@@ -112,7 +130,7 @@ function detectConflicts(slot: ExamSlot, allSlots: ExamSlot[], unavailDates: Set
   // Επιτηρητής επιτηρεί αλλού την ίδια βάρδια
   for (const supId of supervisorIds) {
     const supBusy = others.filter(s => {
-      const ids: number[] = typeof s.supervisorIds === "string" ? JSON.parse(s.supervisorIds) : (s.supervisorIds || []);
+      const ids = parseSupervisorIds(s.supervisorIds);
       return s.date === slot.date && s.shiftId === slot.shiftId && ids.includes(supId);
     });
     if (supBusy.length > 0) {
@@ -217,7 +235,7 @@ export default function SchedulePage() {
 
   const openEdit = (slot: ExamSlot) => {
     setEditSlot(slot);
-    const ids: number[] = typeof slot.supervisorIds === "string" ? JSON.parse(slot.supervisorIds) : (slot.supervisorIds || []);
+    const ids = parseSupervisorIds(slot.supervisorIds);
     setEditForm({
       subjectId: slot.subjectId,
       presenterId: slot.presenterId || 0,
@@ -260,7 +278,7 @@ export default function SchedulePage() {
   const supCounts: Record<number, number> = {};
   for (const t of teacherList) supCounts[t.id] = 0;
   for (const slot of scheduleList) {
-    const ids: number[] = typeof slot.supervisorIds === "string" ? JSON.parse(slot.supervisorIds) : [];
+    const ids = parseSupervisorIds(slot.supervisorIds);
     const weight = slot.subject?.durationMinutes >= 180 ? 1.5 : 1;
     for (const id of ids) supCounts[id] = (supCounts[id] || 0) + weight;
   }
@@ -419,7 +437,7 @@ export default function SchedulePage() {
                         {slots.map((slot) => {
                           const cls = slot.class || classList.find(c => c.id === slot.subject?.classId);
                           const bg = cls ? classColorMap[cls.id] || "#DBEAFE" : "#DBEAFE";
-                          const ids: number[] = typeof slot.supervisorIds === "string" ? JSON.parse(slot.supervisorIds) : [];
+                          const ids = parseSupervisorIds(slot.supervisorIds);
                           const sups = ids.map(id => teacherList.find(t => t.id === id)).filter(Boolean);
                           const conflicts = detectConflicts(slot, scheduleList, unavailDates, teacherUnavail);
                           const hasConflict = conflicts.length > 0;

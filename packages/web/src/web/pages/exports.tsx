@@ -12,6 +12,13 @@ import {
 } from "docx";
 
 const DAY_NAMES_FULL = ["Κυριακή", "Δευτέρα", "Τρίτη", "Τετάρτη", "Πέμπτη", "Παρασκευή", "Σάββατο"];
+// Τα χρώματα των καρτών εξαγωγών είναι ρητά, επειδή το Tailwind δεν μπορεί
+// να ανιχνεύσει δυναμικά class names τύπου bg-${color}-50 στο production build.
+const statColors: Record<string, { background: string; value: string; label: string }> = {
+  blue: { background: "#EFF6FF", value: "#1D4ED8", label: "#2563EB" },
+  green: { background: "#ECFDF5", value: "#047857", label: "#059669" },
+  purple: { background: "#F5F3FF", value: "#6D28D9", label: "#7C3AED" },
+};
 
 function formatDate(d: string) {
   const dt = new Date(d);
@@ -43,7 +50,8 @@ function downloadCSV(filename: string, rows: string[][]) {
   URL.revokeObjectURL(url);
 }
 
-// ── Print table — ένας ενιαίος πίνακας ──
+// Πίνακας εκτύπωσης για ενιαία προβολή όλων των εξετάσεων.
+// Κρατάμε όλη τη δομή εδώ ώστε η οθόνη προεπισκόπησης και το print view να έχουν ίδια διάταξη.
 function PrintTable({ slots, schoolName }: { slots: ExamSlot[]; schoolName: string }) {
   const sorted = [...slots].sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -270,7 +278,8 @@ export default function ExportsPage() {
         },
         children: [
           new Paragraph({
-            text: schoolName,
+            // Στο docx δεν δίνουμε ταυτόχρονα `text` και `children`.
+            // Το TextRun κρατά όλο το styling της κεφαλίδας χωρίς διπλό κείμενο.
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
             children: [new TextRun({ text: schoolName, bold: true, size: 28, font: "Arial" })],
@@ -344,12 +353,17 @@ export default function ExportsPage() {
             { val: slots.length, label: "Εξετάσεις", color: "blue" },
             { val: sortedDates.length, label: "Ημέρες", color: "green" },
             { val: new Set(slots.map(s => s.class?.grade).filter(Boolean)).size, label: "Τάξεις", color: "purple" },
-          ].map(({ val, label, color }) => (
-            <div key={label} className={`rounded-xl p-4 text-center bg-${color}-50`}>
-              <div className={`text-3xl font-bold text-${color}-700`}>{val}</div>
-              <div className={`text-sm text-${color}-600 mt-1`}>{label}</div>
-            </div>
-          ))}
+          ].map(({ val, label, color }) => {
+            const colors = statColors[color] ?? statColors.blue;
+            return (
+              // Χρησιμοποιούμε inline styles από τον παραπάνω χάρτη ώστε τα
+              // χρώματα να υπάρχουν πάντα, ανεξάρτητα από το Tailwind scan.
+              <div key={label} className="rounded-xl p-4 text-center" style={{ background: colors.background }}>
+                <div className="text-3xl font-bold" style={{ color: colors.value }}>{val}</div>
+                <div className="text-sm mt-1" style={{ color: colors.label }}>{label}</div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="rounded-xl p-5 mb-4" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>

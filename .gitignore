@@ -72,3 +72,7 @@ scripts/
 !packages/mobile/scripts/
 packages/mobile/scripts/*
 !packages/mobile/scripts/generate-ios-certs.py
+# Το desktop sync script είναι κομμάτι του build και πρέπει να μπαίνει στο repo,
+# παρότι το γενικό scripts/ pattern αγνοεί local-only provisioning scripts.
+!packages/desktop/scripts/
+!packages/desktop/scripts/sync-web-dist.mjs
