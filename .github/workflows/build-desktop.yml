@@ -6,6 +6,9 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-2022
@@ -34,10 +37,8 @@ jobs:
         working-directory: packages/desktop
 
       - name: Package Windows .exe
-        run: npx electron-builder --win --x64 --config electron-builder.yml
+        run: npx electron-builder --win --x64 --config electron-builder.yml --publish never
         working-directory: packages/desktop
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -45,5 +46,9 @@ jobs:
         with:
           files: packages/desktop/dist/*.exe
           generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact (for manual runs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: EduTimetables-Windows
+          path: packages/desktop/dist/*.exe
