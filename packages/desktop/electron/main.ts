@@ -183,9 +183,6 @@ function createWindow() {
     },
   });
 
-  // Always open DevTools so we can see console errors — remove once stable
-  win.webContents.openDevTools({ mode: "detach" });
-
   win.webContents.on("did-fail-load", (_e, code, desc, url) => {
     console.error(`[renderer] did-fail-load: ${code} ${desc} ${url}`);
     win?.loadURL(
