@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   School,
@@ -27,6 +27,15 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    // In Electron, get real version via IPC; fallback to package version
+    const api = (window as any).electronAPI;
+    if (api?.getVersion) {
+      api.getVersion().then((v: string) => setAppVersion(v)).catch(() => {});
+    }
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -83,7 +92,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Bottom */}
         {!collapsed && (
           <div className="px-3 py-3 border-t border-white/10">
-            <div className="text-xs text-white/40 px-2">v1.0.0 · ΓΕΛ/ΕΠΑΛ</div>
+            <div className="text-xs text-white/40 px-2 leading-relaxed">
+              {appVersion ? `v${appVersion}` : "v1.0.9"}
+              <br />
+              Δημιουργός Γυφτάκης Ιωάννης (ΠΕ86)
+            </div>
           </div>
         )}
 
