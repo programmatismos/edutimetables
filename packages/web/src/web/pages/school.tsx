@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
-import { Plus, Trash2, Save, School, CalendarOff } from "lucide-react";
+import { Plus, Trash2, Save, School, CalendarOff, RotateCcw } from "lucide-react";
 
 export default function SchoolPage() {
   const qc = useQueryClient();
@@ -17,6 +17,7 @@ export default function SchoolPage() {
   const [form, setForm] = useState({ name: "", type: "ΓΕΛ", examStart: "", examEnd: "" });
   const [addUnavailOpen, setAddUnavailOpen] = useState(false);
   const [unavailForm, setUnavailForm] = useState({ date: "", reason: "" });
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (schoolData) {
@@ -42,6 +43,18 @@ export default function SchoolPage() {
   const deleteUnavail = useMutation({
     mutationFn: async (id: number) => (await (api.school.unavailable as any)[":id"].$delete({ param: { id: String(id) } })).json(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["school-unavail"] }),
+  });
+
+  const resetToDefaults = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/reset", { method: "POST" });
+      if (!res.ok) throw new Error("Reset failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      setResetConfirmOpen(false);
+      qc.invalidateQueries();
+    },
   });
 
   return (
@@ -127,6 +140,46 @@ export default function SchoolPage() {
           </div>
         )}
       </div>
+
+      {/* Reset to defaults */}
+      <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--danger-border, #FCA5A5)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--danger, #DC2626)" }}>Επαναφορά σε Προεπιλογές</h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+              Διαγράφει όλα τα δεδομένα (σχολείο, βάρδιες, τάξεις, μαθήματα, εκπαιδευτικούς) και επαναφέρει τα εργοστασιακά defaults.
+            </p>
+          </div>
+          <Button variant="danger" size="sm" onClick={() => setResetConfirmOpen(true)}>
+            <RotateCcw size={13} /> Επαναφορά
+          </Button>
+        </div>
+      </div>
+
+      {/* Reset confirm dialog */}
+      <Modal title="Επαναφορά σε Προεπιλογές" open={resetConfirmOpen} onClose={() => setResetConfirmOpen(false)}>
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--text)" }}>
+            Αυτή η ενέργεια θα <strong>διαγράψει μόνιμα</strong> όλα τα δεδομένα:
+          </p>
+          <ul className="text-sm space-y-1 pl-4 list-disc" style={{ color: "var(--text-secondary)" }}>
+            <li>Στοιχεία σχολείου & εξεταστική περίοδος</li>
+            <li>Βάρδιες</li>
+            <li>Τάξεις & μαθήματα</li>
+            <li>Εκπαιδευτικοί</li>
+            <li>Πρόγραμμα εξετάσεων</li>
+          </ul>
+          <p className="text-sm font-medium" style={{ color: "var(--danger, #DC2626)" }}>
+            Δεν μπορεί να αναιρεθεί. Συνέχεια;
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="secondary" onClick={() => setResetConfirmOpen(false)}>Ακύρωση</Button>
+            <Button variant="danger" onClick={() => resetToDefaults.mutate()} loading={resetToDefaults.isPending}>
+              Ναι, Επαναφορά
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal title="Προσθήκη Μη Διαθέσιμης Ημέρας" open={addUnavailOpen} onClose={() => setAddUnavailOpen(false)}>
         <div className="space-y-4">
