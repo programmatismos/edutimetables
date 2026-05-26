@@ -262,7 +262,16 @@ app.on("activate", () => {
 });
 
 app.whenReady().then(async () => {
-  apiPort = await startServer();
+  try {
+    apiPort = await startServer();
+    console.log(`[main] server started on port ${apiPort}`);
+  } catch (err) {
+    console.error("[main] FATAL: server failed to start:", err);
+    // Show error window so user sees something useful
+    const errWin = new BrowserWindow({ width: 900, height: 600, title: "EduTimetables — Startup Error" });
+    errWin.loadURL(`data:text/html,<pre style="font-family:monospace;padding:20px;color:red">Server failed to start:\n${String(err)}</pre>`);
+    return;
+  }
   createWindow();
   setupAutoUpdater();
 });
