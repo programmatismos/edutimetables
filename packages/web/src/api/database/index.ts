@@ -1,21 +1,17 @@
 /**
  * Database client — dual mode:
- *   • Electron production: better-sqlite3 (native, no asar issues, synchronous)
- *   • Web / Turso remote: @libsql/client (HTTP)
- *
- * We detect Electron by the presence of DATABASE_SQLITE_PATH env var,
- * which main.ts sets before importing api-server.cjs.
+ *   • Electron production: better-sqlite3 (native, sync)
+ *   • Web / Turso remote: @libsql/client (HTTP, async)
  */
 
 import { createRequire } from "node:module";
 import * as schema from "./schema";
 import { initDb } from "./init";
 
-// createRequire works in both CJS (Electron bundle) and ESM (Vite SSR dev)
 const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
 
-// Lazy singleton
 let _db: any = null;
+let _rawSqlite: any = null; // exposed for sync seed operations
 
 function getDb() {
   if (_db) return _db;
@@ -23,17 +19,14 @@ function getDb() {
   const sqlitePath = process.env.DATABASE_SQLITE_PATH;
 
   if (sqlitePath) {
-    // ── Electron: better-sqlite3 (pure sync, no native module loader issues)
     const Database = _require("better-sqlite3");
     const { drizzle } = _require("drizzle-orm/better-sqlite3");
     const sqlite = new Database(sqlitePath);
-    // WAL mode for better concurrent read performance
     sqlite.pragma("journal_mode = WAL");
-    // Create tables if they don't exist (first run)
     initDb(sqlite);
+    _rawSqlite = sqlite;
     _db = drizzle(sqlite, { schema });
   } else {
-    // ── Web / dev / remote Turso
     const { createClient } = _require("@libsql/client");
     const { drizzle } = _require("drizzle-orm/libsql");
     const client = createClient({
@@ -46,7 +39,11 @@ function getDb() {
   return _db;
 }
 
-// Proxy so all existing `db.xxx` call sites keep working without changes
+export function getRawSqlite(): any | null {
+  getDb(); // ensure initialized
+  return _rawSqlite;
+}
+
 export const db = new Proxy({} as any, {
   get(_t, prop) {
     return (getDb() as any)[prop];

@@ -1,7 +1,7 @@
 {
   "name": "@template/desktop",
   "private": true,
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "EduTimetables — Πρόγραμμα Εξετάσεων",
   "author": "programmatismos",
   "type": "module",
