@@ -17,7 +17,7 @@ export async function seedIfEmpty() {
 
     // ── Σχολείο ───────────────────────────────────────────────────────────────
     await db.insert(schema.school).values({
-      name: "Σχολική Μονάδα",
+      name: "1ο ΓΕΛ Πόλης",
       type: "ΓΕΛ",
       examStart: null,
       examEnd: null,
@@ -25,8 +25,8 @@ export async function seedIfEmpty() {
 
     // ── Βάρδιες ───────────────────────────────────────────────────────────────
     const [shiftA, shiftB] = await db.insert(schema.shifts).values([
-      { name: "Α Βάρδια (Πρωινή)",      startTime: "08:00", endTime: "14:00", durationMinutes: 120, order: 1 },
-      { name: "Β Βάρδια (Απογευματινή)", startTime: "14:00", endTime: "20:00", durationMinutes: 120, order: 2 },
+      { name: "Α Βάρδια (Πρωινή)",      startTime: "09:00", endTime: "11:00", durationMinutes: 120, order: 1 },
+      { name: "Β Βάρδια (Μεσημβρινή)", startTime: "11:00", endTime: "13:00", durationMinutes: 120, order: 2 },
     ]).returning();
 
     // ── Τάξεις ΓΕΛ ───────────────────────────────────────────────────────────
