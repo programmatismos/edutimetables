@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +24,10 @@ jobs:
         working-directory: packages/web
 
       - name: Copy web dist to desktop
-        shell: bash
-        run: cp -r packages/web/dist packages/desktop/web-dist
+        run: |
+          New-Item -ItemType Directory -Force -Path packages/desktop/web-dist
+          Copy-Item -Recurse -Force packages/web/dist/* packages/desktop/web-dist/
+        shell: powershell
 
       - name: Build Electron
         run: bun run build
