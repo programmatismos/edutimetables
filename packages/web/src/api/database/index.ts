@@ -9,6 +9,7 @@
 
 import { createRequire } from "node:module";
 import * as schema from "./schema";
+import { initDb } from "./init";
 
 // createRequire works in both CJS (Electron bundle) and ESM (Vite SSR dev)
 const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
@@ -28,6 +29,8 @@ function getDb() {
     const sqlite = new Database(sqlitePath);
     // WAL mode for better concurrent read performance
     sqlite.pragma("journal_mode = WAL");
+    // Create tables if they don't exist (first run)
+    initDb(sqlite);
     _db = drizzle(sqlite, { schema });
   } else {
     // ── Web / dev / remote Turso
