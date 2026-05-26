@@ -8,7 +8,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const isDev = process.env.NODE_ENV !== "production";
+// app.isPackaged is the reliable way to detect production in Electron.
+// NODE_ENV is NOT set to "production" automatically by electron-builder.
+const isDev = !app.isPackaged;
 const WEB_DEV_URL = process.env.WEBSITE_URL ?? "http://localhost:3000";
 
 // In production: web-dist is sibling to dist-electron
