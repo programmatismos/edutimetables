@@ -23,8 +23,16 @@ jobs:
         run: bun install
 
       - name: Build web app
+        env:
+          DATABASE_URL: file:./local.db
         run: bun run build
         working-directory: packages/web
+
+      - name: Push DB schema to seed local.db
+        run: bunx drizzle-kit push --config drizzle.config.ts
+        working-directory: packages/web
+        env:
+          DATABASE_URL: file:./local.db
 
       - name: Copy web dist to desktop
         run: |
@@ -32,9 +40,38 @@ jobs:
           Copy-Item -Recurse -Force packages/web/dist/* packages/desktop/web-dist/
         shell: powershell
 
-      - name: Build Electron
+      - name: Prepare seed DB for extraResources
+        run: |
+          New-Item -ItemType Directory -Force -Path packages/desktop/build
+          if (Test-Path packages/web/local.db) {
+            Copy-Item -Force packages/web/local.db packages/desktop/build/local.db
+          } else {
+            # Create empty placeholder so electron-builder doesn't fail
+            [System.IO.File]::WriteAllBytes("packages/desktop/build/local.db", @())
+          }
+        shell: powershell
+
+      - name: Install desktop package deps (for node_modules packing)
+        run: bun install
+        working-directory: packages/desktop
+
+      - name: Build Electron main/preload (vite-plugin-electron)
         run: bun run build
         working-directory: packages/desktop
+
+      - name: Bundle API server with esbuild
+        # Bundles the Hono API into a single CJS file.
+        # Only the native libsql binary is kept external (loaded from node_modules).
+        run: |
+          npx esbuild packages/desktop/electron/api-server.ts `
+            --bundle `
+            --platform=node `
+            --format=cjs `
+            --outfile=packages/desktop/dist-electron/api-server.cjs `
+            --external:libsql `
+            --external:electron `
+            --target=node18
+        shell: powershell
 
       - name: Package Windows .exe
         run: npx electron-builder --win --x64 --config electron-builder.yml --publish never
