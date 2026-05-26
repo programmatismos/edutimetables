@@ -62,16 +62,7 @@ jobs:
       - name: Bundle API server with esbuild
         # Bundles the Hono API into a single CJS file.
         # Only the native libsql binary is kept external (loaded from node_modules).
-        run: |
-          npx esbuild packages/desktop/electron/api-server.ts `
-            --bundle `
-            --platform=node `
-            --format=cjs `
-            --outfile=packages/desktop/dist-electron/api-server.cjs `
-            --external:libsql `
-            --external:electron `
-            --target=node18
-        shell: powershell
+        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:libsql --external:electron --target=node18
 
       - name: Package Windows .exe
         run: npx electron-builder --win --x64 --config electron-builder.yml --publish never
