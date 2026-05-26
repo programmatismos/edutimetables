@@ -116,6 +116,25 @@ async function startServer(): Promise<number> {
         return;
       }
 
+      // ── Debug info ──────────────────────────────────────────────────────────
+      if (urlStr === "/__debug") {
+        const files = fsSync.existsSync(WEB_DIST) ? fsSync.readdirSync(WEB_DIST) : ["WEB_DIST NOT FOUND"];
+        const dbPath = path.join(app.getPath("userData"), "local.db");
+        const info = {
+          WEB_DIST,
+          webDistExists: fsSync.existsSync(WEB_DIST),
+          webDistFiles: files,
+          dbPath,
+          dbExists: fsSync.existsSync(dbPath),
+          DATABASE_URL: process.env.DATABASE_URL,
+          __dirname,
+        };
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(info, null, 2));
+        return;
+      }
+
       // ── Static files → web-dist ─────────────────────────────────────────────
       try {
         let filePath = urlStr.split("?")[0].replace(/^\//, "");
@@ -164,6 +183,21 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Always open DevTools so we can see console errors — remove once stable
+  win.webContents.openDevTools({ mode: "detach" });
+
+  win.webContents.on("did-fail-load", (_e, code, desc, url) => {
+    console.error(`[renderer] did-fail-load: ${code} ${desc} ${url}`);
+    win?.loadURL(
+      `data:text/html,<pre style="font-family:monospace;padding:20px;color:red">` +
+      `Failed to load: ${desc} (${code})\nURL: ${url}\napiPort: ${apiPort}</pre>`
+    );
+  });
+
+  win.webContents.on("console-message", (_e, level, msg, line, src) => {
+    console.log(`[renderer][${level}] ${msg} (${src}:${line})`);
   });
 
   if (isDev) {
