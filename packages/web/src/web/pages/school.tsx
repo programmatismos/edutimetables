@@ -46,11 +46,7 @@ export default function SchoolPage() {
   });
 
   const resetToDefaults = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/reset", { method: "POST" });
-      if (!res.ok) throw new Error("Reset failed");
-      return res.json();
-    },
+    mutationFn: async () => (await api.reset.$post()).json(),
     onSuccess: () => {
       setResetConfirmOpen(false);
       qc.invalidateQueries();
