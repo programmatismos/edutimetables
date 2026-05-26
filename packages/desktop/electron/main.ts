@@ -1,10 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog, Notification } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import path from "node:path";
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
+
+const require = createRequire(import.meta.url);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,7 +77,6 @@ async function startServer(): Promise<number> {
   // require() finds them instead of the asar-virtual path (which can't load .node files).
   const unpackedModules = path.join(process.resourcesPath, "app.asar.unpacked", "node_modules");
   if (fsSync.existsSync(unpackedModules)) {
-    // @ts-ignore
     const Module = require("module");
     Module.globalPaths.unshift(unpackedModules);
     // Also patch NODE_PATH for any child processes

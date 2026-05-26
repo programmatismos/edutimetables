@@ -12,6 +12,9 @@ directories:
   output: dist
   buildResources: build
 
+# App icon (electron-builder picks up icon.ico for win, icon.png for linux/mac)
+icon: build/icon
+
 # Native .node binaries and their loaders cannot be inside asar — unpack them
 asarUnpack:
   - node_modules/libsql/**
