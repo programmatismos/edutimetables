@@ -7,6 +7,10 @@ import { classesRoutes } from "./routes/classes";
 import { subjectsRoutes } from "./routes/subjects";
 import { scheduleRoutes } from "./routes/schedule";
 import { generateRoutes } from "./routes/generate";
+import { seedIfEmpty } from "./seed";
+
+// Run seed on startup (no-op if data already exists)
+seedIfEmpty();
 
 const app = new Hono()
   .basePath("api")
