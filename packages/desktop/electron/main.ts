@@ -69,13 +69,20 @@ async function startServer(): Promise<number> {
   process.env.DATABASE_URL = `file:${dbPath}`;
   delete process.env.DATABASE_AUTH_TOKEN;
 
-  // The native libsql binary lives in resources alongside the app
-  // Prepend resourcesPath to NODE_PATH so the native addon can be found
-  const nativeDir = path.join(process.resourcesPath, "native_modules");
-  if (fsSync.existsSync(nativeDir)) {
-    process.env.NODE_PATH = nativeDir + path.delimiter + (process.env.NODE_PATH ?? "");
+  // Native modules (libsql, @neon-rs/load, detect-libc) are unpacked from the
+  // asar to app.asar.unpacked/node_modules — we must prepend that path so
+  // require() finds them instead of the asar-virtual path (which can't load .node files).
+  const unpackedModules = path.join(process.resourcesPath, "app.asar.unpacked", "node_modules");
+  if (fsSync.existsSync(unpackedModules)) {
     // @ts-ignore
-    require("module").Module._initPaths();
+    const Module = require("module");
+    Module.globalPaths.unshift(unpackedModules);
+    // Also patch NODE_PATH for any child processes
+    process.env.NODE_PATH = unpackedModules + path.delimiter + (process.env.NODE_PATH ?? "");
+    Module._initPaths();
+    console.log("[main] prepended unpacked node_modules:", unpackedModules);
+  } else {
+    console.warn("[main] unpacked node_modules not found at:", unpackedModules);
   }
 
   // Import the pre-bundled API server (built by esbuild in CI)

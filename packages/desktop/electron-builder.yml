@@ -12,10 +12,12 @@ directories:
   output: dist
   buildResources: build
 
-# Native .node binaries cannot be inside asar — unpack them
+# Native .node binaries and their loaders cannot be inside asar — unpack them
 asarUnpack:
   - node_modules/libsql/**
   - node_modules/@libsql/**
+  - node_modules/@neon-rs/**
+  - node_modules/detect-libc/**
   - "**/*.node"
 
 # Files packed into the app asar
