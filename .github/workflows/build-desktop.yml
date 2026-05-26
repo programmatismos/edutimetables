@@ -19,6 +19,10 @@ jobs:
         with:
           bun-version: latest
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install dependencies
         run: bun install
 
@@ -46,13 +50,17 @@ jobs:
           if (Test-Path packages/web/local.db) {
             Copy-Item -Force packages/web/local.db packages/desktop/build/local.db
           } else {
-            # Create empty placeholder so electron-builder doesn't fail
             [System.IO.File]::WriteAllBytes("packages/desktop/build/local.db", @())
           }
         shell: powershell
 
-      - name: Install desktop package deps (for node_modules packing)
+      - name: Install desktop package deps
         run: bun install
+        working-directory: packages/desktop
+
+      - name: Rebuild better-sqlite3 for Electron
+        # Compiles the native .node addon against the exact Electron headers
+        run: npx electron-rebuild -f -w better-sqlite3
         working-directory: packages/desktop
 
       - name: Build Electron main/preload (vite-plugin-electron)
@@ -60,9 +68,8 @@ jobs:
         working-directory: packages/desktop
 
       - name: Bundle API server with esbuild
-        # Bundles the Hono API into a single CJS file.
-        # Only the native libsql binary is kept external (loaded from node_modules).
-        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:libsql --external:electron --target=node18
+        # better-sqlite3 and electron are kept external (native / Electron built-ins)
+        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:@libsql/client --external:electron --target=node18
 
       - name: Package Windows .exe
         run: npx electron-builder --win --x64 --config electron-builder.yml --publish never

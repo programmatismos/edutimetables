@@ -68,24 +68,11 @@ async function startServer(): Promise<number> {
     }
   }
 
-  // Set env before importing the API so DB client picks it up at module init
-  process.env.DATABASE_URL = `file:${dbPath}`;
+  // Set DATABASE_SQLITE_PATH so the DB layer uses better-sqlite3 (no native loader issues)
+  process.env.DATABASE_SQLITE_PATH = dbPath;
+  // Clear any remote Turso vars
+  delete process.env.DATABASE_URL;
   delete process.env.DATABASE_AUTH_TOKEN;
-
-  // Native modules (libsql, @neon-rs/load, detect-libc) are unpacked from the
-  // asar to app.asar.unpacked/node_modules — we must prepend that path so
-  // require() finds them instead of the asar-virtual path (which can't load .node files).
-  const unpackedModules = path.join(process.resourcesPath, "app.asar.unpacked", "node_modules");
-  if (fsSync.existsSync(unpackedModules)) {
-    const Module = require("module");
-    Module.globalPaths.unshift(unpackedModules);
-    // Also patch NODE_PATH for any child processes
-    process.env.NODE_PATH = unpackedModules + path.delimiter + (process.env.NODE_PATH ?? "");
-    Module._initPaths();
-    console.log("[main] prepended unpacked node_modules:", unpackedModules);
-  } else {
-    console.warn("[main] unpacked node_modules not found at:", unpackedModules);
-  }
 
   // Import the pre-bundled API server (built by esbuild in CI)
   // Path: dist-electron/api-server.cjs (sibling to main.js)

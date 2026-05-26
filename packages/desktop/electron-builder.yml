@@ -12,27 +12,22 @@ directories:
   output: dist
   buildResources: build
 
-# App icon (electron-builder picks up icon.ico for win, icon.png for linux/mac)
+# App icon
 icon: build/icon
 
-# Native .node binaries and their loaders cannot be inside asar — unpack them
+# better-sqlite3 contains a .node binary — must be unpacked from asar
 asarUnpack:
-  - node_modules/libsql/**
-  - node_modules/@libsql/**
-  - node_modules/@neon-rs/**
-  - node_modules/detect-libc/**
+  - node_modules/better-sqlite3/**
   - "**/*.node"
 
-# Files packed into the app asar
+# Files packed into the app
 files:
   - dist-electron/**
   - web-dist/**
   - package.json
-  # Native libsql binary (kept external from esbuild bundle)
-  - node_modules/libsql/**
-  - node_modules/@libsql/**
-  - node_modules/detect-libc/**
-  - node_modules/@neon-rs/**
+  - node_modules/better-sqlite3/**
+  - node_modules/bindings/**
+  - node_modules/file-uri-to-path/**
   # electron-updater and its deps
   - node_modules/electron-updater/**
   - node_modules/builder-util-runtime/**
