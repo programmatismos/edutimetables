@@ -37,9 +37,15 @@ function getDb() {
   const sqlitePath = process.env.DATABASE_SQLITE_PATH;
 
   if (sqlitePath) {
-    // Electron path — better-sqlite3 is native, loaded from unpacked asar
+    // Electron path — better-sqlite3 is native, loaded from unpacked asar.
+    // Pass nativeBinding directly to avoid the 'bindings' module resolver
+    // which fails inside asar (it uses V8 stack inspection to find module_root).
+    const modulesPath = process.env.ELECTRON_MODULES_PATH;
     const Database = requireNative("better-sqlite3");
-    const sqlite = new Database(sqlitePath);
+    const nativeBindingOpts = modulesPath
+      ? { nativeBinding: path.join(modulesPath, "better-sqlite3", "build", "Release", "better_sqlite3.node") }
+      : {};
+    const sqlite = new Database(sqlitePath, nativeBindingOpts);
     sqlite.pragma("journal_mode = WAL");
     initDb(sqlite);
     _rawSqlite = sqlite;
