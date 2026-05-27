@@ -395,18 +395,25 @@ function setupAutoUpdater() {
 
     ipcMain.handle("updater:download", () => autoUpdater.downloadUpdate());
     ipcMain.handle("updater:install", () => autoUpdater.quitAndInstall());
-    // Wrap checkForUpdates so we always send not-available back to renderer
-    ipcMain.handle("updater:check", () =>
-      autoUpdater.checkForUpdates().then((result: any) => {
-        // If no update is pending download, notify renderer
-        if (!result?.updateInfo?.version || result.updateInfo.version === app.getVersion()) {
+    // Always resolve within 10s — checkForUpdates can hang indefinitely on network issues
+    ipcMain.handle("updater:check", () => {
+      const timeout = new Promise<void>((resolve) =>
+        setTimeout(() => {
           win?.webContents.send("updater:not-available");
-        }
-        return result;
-      }).catch((err: Error) => {
-        win?.webContents.send("updater:error", { message: err.message });
-      })
-    );
+          resolve();
+        }, 10000)
+      );
+      const check = autoUpdater.checkForUpdates()
+        .then((result: any) => {
+          if (!result?.updateInfo?.version || result.updateInfo.version === app.getVersion()) {
+            win?.webContents.send("updater:not-available");
+          }
+        })
+        .catch((err: Error) => {
+          win?.webContents.send("updater:error", { message: err.message });
+        });
+      return Promise.race([check, timeout]);
+    });
 
     return autoUpdater;
   }).catch((err) => {

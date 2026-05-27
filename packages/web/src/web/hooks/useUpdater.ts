@@ -55,11 +55,11 @@ export function useUpdater() {
   const install  = () => getApi()?.install();
   const check    = () => {
     setState({ status: "checking" });
-    // Fallback: if no response within 10s, reset to idle
-    const t = setTimeout(() => setState((s) => s.status === "checking" ? { status: "idle" } : s), 10000);
-    const p = getApi()?.check();
-    Promise.resolve(p).catch(() => {}).finally(() => clearTimeout(t));
-    return p;
+    // Hard fallback: always reset after 12s regardless of what happens
+    setTimeout(() => {
+      setState((s) => (s.status === "checking" ? { status: "idle" } : s));
+    }, 12000);
+    getApi()?.check();
   };
   const dismiss  = () => setState({ status: "idle" });
 
