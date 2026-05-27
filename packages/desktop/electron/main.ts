@@ -385,6 +385,10 @@ function setupAutoUpdater() {
       win?.webContents.send("updater:downloaded", { version: info.version });
     });
 
+    autoUpdater.on("update-not-available", () => {
+      win?.webContents.send("updater:not-available");
+    });
+
     autoUpdater.on("error", (err) => {
       win?.webContents.send("updater:error", { message: err.message });
     });

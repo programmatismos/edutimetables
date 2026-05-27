@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 type UpdaterState =
   | { status: "idle" }
+  | { status: "checking" }
+  | { status: "not-available" }
   | { status: "available"; version: string; releaseNotes: string | null }
   | { status: "downloading"; percent: number }
   | { status: "ready"; version: string }
@@ -32,6 +34,9 @@ export function useUpdater() {
     const offError = api.onError((err: { message: string }) => {
       setState({ status: "error", message: err.message });
     });
+    const offNotAvailable = api.onNotAvailable?.(() => {
+      setState({ status: "not-available" });
+    });
     const offManualCheck = api.onManualCheck?.(() => {
       api.check();
     });
@@ -41,13 +46,14 @@ export function useUpdater() {
       offProgress?.();
       offDownloaded?.();
       offError?.();
+      offNotAvailable?.();
       offManualCheck?.();
     };
   }, []);
 
   const download = () => getApi()?.download();
   const install  = () => getApi()?.install();
-  const check    = () => getApi()?.check();
+  const check    = () => { setState({ status: "checking" }); return getApi()?.check(); };
   const dismiss  = () => setState({ status: "idle" });
 
   return { state, download, install, check, dismiss, isElectron };

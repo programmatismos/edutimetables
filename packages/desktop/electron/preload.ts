@@ -47,6 +47,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.on("updater:error", (_, err) => cb(err));
       return () => ipcRenderer.removeAllListeners("updater:error");
     },
+    onNotAvailable: (cb: () => void) => {
+      ipcRenderer.on("updater:not-available", () => cb());
+      return () => ipcRenderer.removeAllListeners("updater:not-available");
+    },
     onManualCheck: (cb: () => void) => {
       ipcRenderer.on("updater:manual-check", () => cb());
       return () => ipcRenderer.removeAllListeners("updater:manual-check");

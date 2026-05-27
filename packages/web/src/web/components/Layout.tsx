@@ -30,8 +30,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [appVersion, setAppVersion] = useState<string | null>(null);
-  const { check, isElectron, state: updaterState } = useUpdater();
-  const [checking, setChecking] = useState(false);
+  const { check, dismiss, isElectron, state: updaterState } = useUpdater();
 
   useEffect(() => {
     // In Electron, get real version via IPC; fallback to package version
@@ -41,12 +40,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const handleCheckUpdate = async () => {
-    if (checking) return;
-    setChecking(true);
-    try { await check(); } catch {}
-    setTimeout(() => setChecking(false), 3000);
+  // Auto-dismiss "not-available" after 4 seconds
+  useEffect(() => {
+    if (updaterState.status === "not-available") {
+      const t = setTimeout(() => dismiss(), 4000);
+      return () => clearTimeout(t);
+    }
+  }, [updaterState.status]);
+
+  const handleCheckUpdate = () => {
+    if (updaterState.status === "checking" || updaterState.status === "downloading") return;
+    check();
   };
+
+  const isChecking = updaterState.status === "checking";
+  const isSpinning = isChecking || updaterState.status === "downloading";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -104,21 +112,34 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="px-2 py-3 border-t border-white/10 space-y-1">
           {/* Check for updates — only in Electron */}
           {isElectron && (
-            <button
-              onClick={handleCheckUpdate}
-              title={collapsed ? "Έλεγχος ενημερώσεων" : undefined}
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
-            >
-              <RefreshCw
-                size={15}
-                className={`flex-shrink-0 ${checking || updaterState.status === "downloading" ? "animate-spin" : ""}`}
-              />
-              {!collapsed && (
-                <span className="whitespace-nowrap overflow-hidden">
-                  {checking ? "Έλεγχος…" : "Έλεγχος ενημερώσεων"}
-                </span>
+            <>
+              <button
+                onClick={handleCheckUpdate}
+                title={collapsed ? "Έλεγχος ενημερώσεων" : undefined}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
+              >
+                <RefreshCw
+                  size={15}
+                  className={`flex-shrink-0 ${isSpinning ? "animate-spin" : ""}`}
+                />
+                {!collapsed && (
+                  <span className="whitespace-nowrap overflow-hidden">
+                    {isChecking ? "Έλεγχος…" : "Έλεγχος ενημερώσεων"}
+                  </span>
+                )}
+              </button>
+              {/* Inline feedback below the button */}
+              {!collapsed && updaterState.status === "not-available" && (
+                <div className="px-2 py-1 text-xs rounded-lg" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}>
+                  ✓ Χρησιμοποιείτε την τελευταία έκδοση.
+                </div>
               )}
-            </button>
+              {!collapsed && updaterState.status === "error" && (
+                <div className="px-2 py-1 text-xs rounded-lg" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>
+                  Αδύνατος ο έλεγχος ενημερώσεων.
+                </div>
+              )}
+            </>
           )}
           {!collapsed && (
             <div className="text-xs text-white/40 px-2 leading-relaxed">
