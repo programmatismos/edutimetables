@@ -62,32 +62,12 @@ jobs:
         run: bun install
         working-directory: packages/desktop
 
-      - name: Rebuild better-sqlite3 for Electron
-        # Compiles the native .node addon against the exact Electron headers
-        run: npx electron-rebuild -f -w better-sqlite3
-        working-directory: packages/desktop
-
-      - name: Build Electron main/preload (vite-plugin-electron)
-        run: bun run build
-        working-directory: packages/desktop
-
       - name: Copy drizzle-orm to desktop node_modules
         # drizzle-orm lives in packages/web/node_modules (bun workspace).
         # electron-builder only packs packages/desktop/node_modules, so we copy it there.
         run: |
           New-Item -ItemType Directory -Force -Path packages/desktop/node_modules/drizzle-orm
           Copy-Item -Recurse -Force packages/web/node_modules/drizzle-orm/* packages/desktop/node_modules/drizzle-orm/
-          # bindings + file-uri-to-path are deps of better-sqlite3; copy from root node_modules
-          foreach ($pkg in @("bindings", "file-uri-to-path")) {
-            $src = "node_modules/$pkg"
-            if (-not (Test-Path $src)) { $src = "packages/web/node_modules/$pkg" }
-            if (Test-Path $src) {
-              New-Item -ItemType Directory -Force -Path "packages/desktop/node_modules/$pkg"
-              Copy-Item -Recurse -Force "$src/*" "packages/desktop/node_modules/$pkg/"
-            } else {
-              Write-Warning "Could not find $pkg in node_modules"
-            }
-          }
         shell: powershell
 
       - name: Bundle API server with esbuild
@@ -96,11 +76,22 @@ jobs:
         run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:drizzle-orm --external:@libsql/client --external:electron --target=node18
 
       - name: Test bundle (smoke test before packaging)
-        # Loads the bundle and hits critical API endpoints against local.db.
-        # Fails fast if the bundle is broken before spending time on electron-builder.
+        # Runs BEFORE electron-rebuild so better-sqlite3 is still compiled for Node 20
+        # (matching the runner). After this step we rebuild for Electron ABI.
         env:
           DATABASE_SQLITE_PATH: packages/web/local.db
+          ELECTRON_MODULES_PATH: packages/desktop/node_modules
         run: node packages/desktop/scripts/test-bundle.mjs
+
+      - name: Rebuild better-sqlite3 for Electron
+        # Compiles the native .node addon against the exact Electron headers.
+        # Must happen AFTER the test step (which needs the Node 20 ABI binary).
+        run: npx electron-rebuild -f -w better-sqlite3
+        working-directory: packages/desktop
+
+      - name: Build Electron main/preload (vite-plugin-electron)
+        run: bun run build
+        working-directory: packages/desktop
 
       - name: Package Windows .exe
         run: npx electron-builder --win --x64 --config electron-builder.yml --publish never

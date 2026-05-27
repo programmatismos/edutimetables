@@ -18,9 +18,13 @@ const DESKTOP = path.resolve(__dirname, "..");
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
 const BUNDLE     = path.join(DESKTOP, "dist-electron", "api-server.cjs");
-const DB_PATH    = path.join(ROOT, "packages/web/local.db");
-// better-sqlite3: look in desktop/node_modules (copied there in CI)
-const UNPACKED   = path.join(DESKTOP, "node_modules");
+// defaults: use absolute paths so they work from any CWD
+const DB_PATH    = process.env.DATABASE_SQLITE_PATH
+  ? path.resolve(process.env.DATABASE_SQLITE_PATH)
+  : path.join(ROOT, "packages/web/local.db");
+const UNPACKED   = process.env.ELECTRON_MODULES_PATH
+  ? path.resolve(process.env.ELECTRON_MODULES_PATH)
+  : path.join(DESKTOP, "node_modules");
 // drizzle-orm: look in web/node_modules
 const DRIZZLE    = path.join(ROOT, "packages/web/node_modules");
 
@@ -37,6 +41,8 @@ if (!fs.existsSync(DB_PATH)) {
 // ── Simulate Electron env ─────────────────────────────────────────────────────
 process.env.DATABASE_SQLITE_PATH = DB_PATH;
 process.env.ELECTRON_MODULES_PATH = UNPACKED;
+console.log("DB:", DB_PATH);
+console.log("UNPACKED:", UNPACKED);
 
 // Patch require so drizzle-orm resolves from web/node_modules
 // (in production it's packed into asar, here we simulate that)
