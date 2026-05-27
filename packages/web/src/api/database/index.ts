@@ -3,8 +3,9 @@
  *   • Electron production: better-sqlite3 (native, sync) loaded from asar.unpacked
  *   • Web / Turso remote: @libsql/client (HTTP, async)
  *
- * drizzle-orm adapters are statically imported so esbuild bundles them into
- * api-server.cjs — no runtime module resolution needed.
+ * drizzle-orm/better-sqlite3 is statically imported → bundled by esbuild.
+ * drizzle-orm/libsql and @libsql/client are kept external (native binary deps)
+ * and only loaded dynamically in the web/Turso path.
  */
 
 import { createRequire } from "node:module";
@@ -12,9 +13,8 @@ import path from "node:path";
 import * as schema from "./schema";
 import { initDb } from "./init";
 
-// Static imports — bundled by esbuild into api-server.cjs
+// Statically imported → esbuild bundles this (pure JS, no native dep)
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
-import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
 
 const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
 
@@ -36,6 +36,7 @@ function getDb() {
   const sqlitePath = process.env.DATABASE_SQLITE_PATH;
 
   if (sqlitePath) {
+    // Electron path — better-sqlite3 is native, loaded from unpacked asar
     const Database = requireNative("better-sqlite3");
     const sqlite = new Database(sqlitePath);
     sqlite.pragma("journal_mode = WAL");
@@ -43,7 +44,9 @@ function getDb() {
     _rawSqlite = sqlite;
     _db = drizzleSqlite(sqlite, { schema });
   } else {
+    // Web / Turso path — kept external, loaded at runtime only
     const { createClient } = _require("@libsql/client");
+    const { drizzle: drizzleLibsql } = _require("drizzle-orm/libsql");
     const client = createClient({
       url: process.env.DATABASE_URL!,
       authToken: process.env.DATABASE_AUTH_TOKEN,

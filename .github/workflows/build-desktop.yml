@@ -71,9 +71,10 @@ jobs:
         shell: powershell
 
       - name: Bundle API server with esbuild
-        # drizzle-orm and @libsql/client are pure JS — bundle them directly.
-        # Only better-sqlite3 (native .node binary) and electron stay external.
-        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:electron --target=node18
+        # drizzle-orm/better-sqlite3 and drizzle-orm core are bundled (pure JS).
+        # @libsql/client and drizzle-orm/libsql stay external (native binary, web-only path).
+        # better-sqlite3 and electron stay external (native / Electron runtime).
+        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:electron --external:@libsql/client --external:drizzle-orm/libsql --target=node18
 
       - name: Test bundle (smoke test before packaging)
         # Runs BEFORE electron-rebuild so better-sqlite3 is still compiled for Node 20
