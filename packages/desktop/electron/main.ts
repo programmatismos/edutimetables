@@ -74,6 +74,12 @@ async function startServer(): Promise<number> {
   delete process.env.DATABASE_URL;
   delete process.env.DATABASE_AUTH_TOKEN;
 
+  // Tell the DB layer where to find better-sqlite3 (inside app.asar.unpacked)
+  // The bundled api-server.cjs uses require() which resolves relative to the bundle,
+  // but native modules are unpacked from asar — we pass the exact path via env var.
+  const unpackedModules = path.join(process.resourcesPath, "app.asar.unpacked", "node_modules");
+  process.env.ELECTRON_MODULES_PATH = unpackedModules;
+
   // Import the pre-bundled API server (built by esbuild in CI)
   // Path: dist-electron/api-server.cjs (sibling to main.js)
   const serverModulePath = path.join(__dirname, "api-server.cjs");
@@ -106,10 +112,12 @@ async function startServer(): Promise<number> {
           res.statusCode = webRes.status;
           webRes.headers.forEach((val: string, key: string) => res.setHeader(key, val));
           res.end(Buffer.from(await webRes.arrayBuffer()));
-        } catch (err) {
-          console.error("[api] error:", err);
+        } catch (err: any) {
+          const msg = err?.stack ?? err?.message ?? String(err);
+          console.error("[api] error:", msg);
           res.statusCode = 500;
-          res.end("Internal Server Error");
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: msg }));
         }
         return;
       }
