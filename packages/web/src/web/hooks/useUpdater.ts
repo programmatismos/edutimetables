@@ -7,14 +7,18 @@ type UpdaterState =
   | { status: "ready"; version: string }
   | { status: "error"; message: string };
 
-const api = (window as any).electronAPI?.updater;
-const isElectron = !!api;
+function getApi() {
+  return (window as any).electronAPI?.updater ?? null;
+}
 
 export function useUpdater() {
   const [state, setState] = useState<UpdaterState>({ status: "idle" });
+  const [isElectron, setIsElectron] = useState(false);
 
   useEffect(() => {
-    if (!isElectron) return;
+    const api = getApi();
+    if (!api) return;
+    setIsElectron(true);
 
     const offAvailable = api.onAvailable((info: { version: string; releaseNotes: string | null }) => {
       setState({ status: "available", version: info.version, releaseNotes: info.releaseNotes });
@@ -37,9 +41,9 @@ export function useUpdater() {
     };
   }, []);
 
-  const download = () => api?.download();
-  const install  = () => api?.install();
-  const check    = () => api?.check();
+  const download = () => getApi()?.download();
+  const install  = () => getApi()?.install();
+  const check    = () => getApi()?.check();
   const dismiss  = () => setState({ status: "idle" });
 
   return { state, download, install, check, dismiss, isElectron };
