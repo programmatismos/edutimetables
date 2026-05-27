@@ -13,7 +13,6 @@ import path from "node:path";
 import fs from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "../../..");
 const DESKTOP = path.resolve(__dirname, "..");
 
 // ── Paths ─────────────────────────────────────────────────────────────────────
@@ -21,12 +20,11 @@ const BUNDLE     = path.join(DESKTOP, "dist-electron", "api-server.cjs");
 // defaults: use absolute paths so they work from any CWD
 const DB_PATH    = process.env.DATABASE_SQLITE_PATH
   ? path.resolve(process.env.DATABASE_SQLITE_PATH)
-  : path.join(ROOT, "packages/web/local.db");
+  : path.join(DESKTOP, "../../packages/web/local.db");
 const UNPACKED   = process.env.ELECTRON_MODULES_PATH
   ? path.resolve(process.env.ELECTRON_MODULES_PATH)
   : path.join(DESKTOP, "node_modules");
-// drizzle-orm: look in web/node_modules
-const DRIZZLE    = path.join(ROOT, "packages/web/node_modules");
+
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 if (!fs.existsSync(BUNDLE)) {
@@ -43,19 +41,6 @@ process.env.DATABASE_SQLITE_PATH = DB_PATH;
 process.env.ELECTRON_MODULES_PATH = UNPACKED;
 console.log("DB:", DB_PATH);
 console.log("UNPACKED:", UNPACKED);
-
-// Patch require so drizzle-orm resolves from web/node_modules
-// (in production it's packed into asar, here we simulate that)
-const _require2 = createRequire(import.meta.url);
-const Module = _require2("module");
-const _orig = Module._load.bind(Module);
-Module._load = function (request, parent, isMain) {
-  if (request.startsWith("drizzle-orm")) {
-    const resolved = path.join(DRIZZLE, request);
-    return _orig(resolved, parent, isMain);
-  }
-  return _orig(request, parent, isMain);
-};
 
 // ── Load bundle ───────────────────────────────────────────────────────────────
 const _require = createRequire(import.meta.url);
