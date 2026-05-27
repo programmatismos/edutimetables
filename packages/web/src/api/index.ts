@@ -8,6 +8,7 @@ import { subjectsRoutes } from "./routes/subjects";
 import { scheduleRoutes } from "./routes/schedule";
 import { generateRoutes } from "./routes/generate";
 import { resetRoutes } from "./routes/reset";
+import { importRoutes } from "./routes/import";
 import { seedIfEmpty } from "./seed";
 
 // Run seed on startup (no-op if data already exists)
@@ -28,7 +29,8 @@ const app = new Hono()
   .route("/subjects", subjectsRoutes)
   .route("/schedule", scheduleRoutes)
   .route("/generate", generateRoutes)
-  .route("/reset", resetRoutes);
+  .route("/reset", resetRoutes)
+  .route("/import", importRoutes);
 
 export type AppType = typeof app;
 export default app;

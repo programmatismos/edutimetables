@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "../components/ui/Button";
 import { Input, Select, DateInput } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
-import { Plus, Trash2, Save, School, CalendarOff, RotateCcw } from "lucide-react";
+import { Plus, Trash2, Save, School, CalendarOff, RotateCcw, Upload } from "lucide-react";
+import { ImportDialog } from "../components/ImportDialog";
 
 export default function SchoolPage() {
   const qc = useQueryClient();
@@ -18,6 +19,7 @@ export default function SchoolPage() {
   const [addUnavailOpen, setAddUnavailOpen] = useState(false);
   const [unavailForm, setUnavailForm] = useState({ date: "", reason: "" });
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (schoolData) {
@@ -139,6 +141,21 @@ export default function SchoolPage() {
         )}
       </div>
 
+      {/* Import data */}
+      <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-sm" style={{ color: "var(--text)" }}>Εισαγωγή Δεδομένων</h2>
+            <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>
+              Εισαγωγή εκπαιδευτικών, τμημάτων και μαθημάτων από Excel ή CSV.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => setImportOpen(true)}>
+            <Upload size={13} /> Εισαγωγή
+          </Button>
+        </div>
+      </div>
+
       {/* Reset to defaults */}
       <div className="rounded-xl p-5" style={{ background: "var(--surface)", border: "1px solid var(--danger-border, #FCA5A5)" }}>
         <div className="flex items-center justify-between">
@@ -178,6 +195,8 @@ export default function SchoolPage() {
           </div>
         </div>
       </Modal>
+
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
 
       <Modal title="Προσθήκη Μη Διαθέσιμης Ημέρας" open={addUnavailOpen} onClose={() => setAddUnavailOpen(false)}>
         <div className="space-y-4">
