@@ -11,7 +11,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
+import { useUpdater } from "../hooks/useUpdater";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -28,6 +30,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [appVersion, setAppVersion] = useState<string | null>(null);
+  const { check, isElectron, state: updaterState } = useUpdater();
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     // In Electron, get real version via IPC; fallback to package version
@@ -36,6 +40,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
       api.getVersion().then((v: string) => setAppVersion(v)).catch(() => {});
     }
   }, []);
+
+  const handleCheckUpdate = async () => {
+    if (checking) return;
+    setChecking(true);
+    try { await check(); } catch {}
+    setTimeout(() => setChecking(false), 3000);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -90,15 +101,33 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Bottom */}
-        {!collapsed && (
-          <div className="px-3 py-3 border-t border-white/10">
+        <div className="px-2 py-3 border-t border-white/10 space-y-1">
+          {/* Check for updates — only in Electron */}
+          {isElectron && (
+            <button
+              onClick={handleCheckUpdate}
+              title={collapsed ? "Έλεγχος ενημερώσεων" : undefined}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all text-xs font-medium"
+            >
+              <RefreshCw
+                size={15}
+                className={`flex-shrink-0 ${checking || updaterState.status === "downloading" ? "animate-spin" : ""}`}
+              />
+              {!collapsed && (
+                <span className="whitespace-nowrap overflow-hidden">
+                  {checking ? "Έλεγχος…" : "Έλεγχος ενημερώσεων"}
+                </span>
+              )}
+            </button>
+          )}
+          {!collapsed && (
             <div className="text-xs text-white/40 px-2 leading-relaxed">
               {appVersion ? `v${appVersion}` : "v1.0.9"}
               <br />
               Δημιουργός Γυφτάκης Ιωάννης (ΠΕ86)
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Collapse toggle */}
         <button
