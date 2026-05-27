@@ -395,7 +395,18 @@ function setupAutoUpdater() {
 
     ipcMain.handle("updater:download", () => autoUpdater.downloadUpdate());
     ipcMain.handle("updater:install", () => autoUpdater.quitAndInstall());
-    ipcMain.handle("updater:check", () => autoUpdater.checkForUpdates());
+    // Wrap checkForUpdates so we always send not-available back to renderer
+    ipcMain.handle("updater:check", () =>
+      autoUpdater.checkForUpdates().then((result: any) => {
+        // If no update is pending download, notify renderer
+        if (!result?.updateInfo?.version || result.updateInfo.version === app.getVersion()) {
+          win?.webContents.send("updater:not-available");
+        }
+        return result;
+      }).catch((err: Error) => {
+        win?.webContents.send("updater:error", { message: err.message });
+      })
+    );
 
     return autoUpdater;
   }).catch((err) => {

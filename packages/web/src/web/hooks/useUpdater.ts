@@ -53,7 +53,14 @@ export function useUpdater() {
 
   const download = () => getApi()?.download();
   const install  = () => getApi()?.install();
-  const check    = () => { setState({ status: "checking" }); return getApi()?.check(); };
+  const check    = () => {
+    setState({ status: "checking" });
+    // Fallback: if no response within 10s, reset to idle
+    const t = setTimeout(() => setState((s) => s.status === "checking" ? { status: "idle" } : s), 10000);
+    const p = getApi()?.check();
+    Promise.resolve(p).catch(() => {}).finally(() => clearTimeout(t));
+    return p;
+  };
   const dismiss  = () => setState({ status: "idle" });
 
   return { state, download, install, check, dismiss, isElectron };

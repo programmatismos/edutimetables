@@ -1,6 +1,6 @@
 import { Route, Switch } from "wouter";
 import { Provider } from "./components/provider";
-import { AgentFeedback, RunableBadge } from "@runablehq/website-runtime";
+import { AgentFeedback } from "@runablehq/website-runtime";
 import { Layout } from "./components/Layout";
 import { UpdateBanner } from "./components/UpdateBanner";
 
@@ -31,8 +31,7 @@ function App() {
       {/* Do not remove — off by default, activated by parent iframe via postMessage */}
       <UpdateBanner />
       {import.meta.env.DEV && <AgentFeedback />}
-      {/* "Made with Runable" badge */}
-      {<RunableBadge />}
+
     </Provider>
   );
 }
