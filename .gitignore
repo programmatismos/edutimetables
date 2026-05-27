@@ -75,3 +75,6 @@ packages/mobile/scripts/*
 !packages/web/scripts/
 packages/web/scripts/*
 !packages/web/scripts/seed-local-db.mjs
+!packages/desktop/scripts/
+packages/desktop/scripts/*
+!packages/desktop/scripts/test-bundle.mjs
