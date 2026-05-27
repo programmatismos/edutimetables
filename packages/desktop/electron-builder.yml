@@ -18,6 +18,8 @@ icon: build/icon
 # better-sqlite3 contains a .node binary — must be unpacked from asar
 asarUnpack:
   - node_modules/better-sqlite3/**
+  - node_modules/bindings/**
+  - node_modules/file-uri-to-path/**
   - "**/*.node"
 
 # Files packed into the app
