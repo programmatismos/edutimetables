@@ -1,8 +1,8 @@
 {
   "name": "@template/desktop",
   "private": true,
-  "version": "1.0.20",
-  "description": "EduTimetables — Πρόγραμμα Εξετάσεων",
+  "version": "1.0.21",
+  "description": "EduTimetables \u2014 \u03a0\u03c1\u03cc\u03b3\u03c1\u03b1\u03bc\u03bc\u03b1 \u0395\u03be\u03b5\u03c4\u03ac\u03c3\u03b5\u03c9\u03bd",
   "author": "programmatismos",
   "type": "module",
   "main": "dist-electron/main.js",

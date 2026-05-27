@@ -32,12 +32,16 @@ export function useUpdater() {
     const offError = api.onError((err: { message: string }) => {
       setState({ status: "error", message: err.message });
     });
+    const offManualCheck = api.onManualCheck?.(() => {
+      api.check();
+    });
 
     return () => {
       offAvailable?.();
       offProgress?.();
       offDownloaded?.();
       offError?.();
+      offManualCheck?.();
     };
   }, []);
 

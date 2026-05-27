@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Notification } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, Notification, Menu, MenuItem } from "electron";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -227,6 +227,69 @@ function createWindow() {
   });
 }
 
+// ─── Application Menu ─────────────────────────────────────────────────────────
+function setupMenu() {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: "File",
+      submenu: [
+        { role: "quit" as const },
+      ],
+    },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" as const },
+        { role: "redo" as const },
+        { type: "separator" as const },
+        { role: "cut" as const },
+        { role: "copy" as const },
+        { role: "paste" as const },
+        { role: "selectAll" as const },
+      ],
+    },
+    {
+      label: "View",
+      submenu: [
+        { role: "reload" as const },
+        { role: "toggleDevTools" as const },
+        { type: "separator" as const },
+        { role: "resetZoom" as const },
+        { role: "zoomIn" as const },
+        { role: "zoomOut" as const },
+        { type: "separator" as const },
+        { role: "togglefullscreen" as const },
+      ],
+    },
+    {
+      label: "Help",
+      submenu: [
+        {
+          label: "Check for Updates",
+          click: () => {
+            win?.webContents.send("updater:manual-check");
+          },
+        },
+        {
+          label: "About EduTimetables",
+          click: () => {
+            dialog.showMessageBox({
+              type: "info",
+              title: "About EduTimetables",
+              message: `EduTimetables v${app.getVersion()}`,
+              detail: "School timetable management made simple.",
+              buttons: ["OK"],
+            });
+          },
+        },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
 // ─── Auto-updater ─────────────────────────────────────────────────────────────
 function setupAutoUpdater() {
   if (isDev) return;
@@ -326,6 +389,7 @@ app.whenReady().then(async () => {
     errWin.loadURL(`data:text/html,<pre style="font-family:monospace;padding:20px;color:red">Server failed to start:\n${String(err)}</pre>`);
     return;
   }
+  setupMenu();
   createWindow();
   setupAutoUpdater();
 });
