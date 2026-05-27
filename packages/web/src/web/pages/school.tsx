@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, safeJson } from "../lib/api";
 import { useState, useEffect } from "react";
 import { Button } from "../components/ui/Button";
-import { Input, Select } from "../components/ui/Input";
+import { Input, Select, DateInput } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { Plus, Trash2, Save, School, CalendarOff, RotateCcw } from "lucide-react";
 
@@ -87,15 +87,13 @@ export default function SchoolPage() {
         </Select>
 
         <div className="grid grid-cols-2 gap-4">
-          <Input
+          <DateInput
             label="Έναρξη Εξεταστικής"
-            type="date"
             value={form.examStart}
             onChange={(e) => setForm({ ...form, examStart: e.target.value })}
           />
-          <Input
+          <DateInput
             label="Λήξη Εξεταστικής"
-            type="date"
             value={form.examEnd}
             onChange={(e) => setForm({ ...form, examEnd: e.target.value })}
           />
@@ -183,9 +181,8 @@ export default function SchoolPage() {
 
       <Modal title="Προσθήκη Μη Διαθέσιμης Ημέρας" open={addUnavailOpen} onClose={() => setAddUnavailOpen(false)}>
         <div className="space-y-4">
-          <Input
+          <DateInput
             label="Ημερομηνία"
-            type="date"
             value={unavailForm.date}
             onChange={(e) => setUnavailForm({ ...unavailForm, date: e.target.value })}
           />

@@ -40,10 +40,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Auto-dismiss "not-available" after 4 seconds
+  // Auto-dismiss "not-available" / "error" after 5 seconds
   useEffect(() => {
-    if (updaterState.status === "not-available") {
-      const t = setTimeout(() => dismiss(), 4000);
+    if (updaterState.status === "not-available" || updaterState.status === "error") {
+      const t = setTimeout(() => dismiss(), 5000);
       return () => clearTimeout(t);
     }
   }, [updaterState.status]);
@@ -55,6 +55,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const isChecking = updaterState.status === "checking";
   const isSpinning = isChecking || updaterState.status === "downloading";
+  const btnLabel = isChecking ? "Έλεγχος…"
+    : updaterState.status === "not-available" ? "✓ Τελευταία έκδοση"
+    : updaterState.status === "error" ? "Σφάλμα σύνδεσης"
+    : "Έλεγχος ενημερώσεων";
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -123,22 +127,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   className={`flex-shrink-0 ${isSpinning ? "animate-spin" : ""}`}
                 />
                 {!collapsed && (
-                  <span className="whitespace-nowrap overflow-hidden">
-                    {isChecking ? "Έλεγχος…" : "Έλεγχος ενημερώσεων"}
-                  </span>
+                  <span className="whitespace-nowrap overflow-hidden">{btnLabel}</span>
                 )}
-              </button>
-              {/* Inline feedback below the button */}
-              {!collapsed && updaterState.status === "not-available" && (
-                <div className="px-2 py-1 text-xs rounded-lg" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.55)" }}>
-                  ✓ Χρησιμοποιείτε την τελευταία έκδοση.
-                </div>
-              )}
-              {!collapsed && updaterState.status === "error" && (
-                <div className="px-2 py-1 text-xs rounded-lg" style={{ background: "rgba(239,68,68,0.15)", color: "#FCA5A5" }}>
-                  Αδύνατος ο έλεγχος ενημερώσεων.
-                </div>
-              )}
             </>
           )}
           {!collapsed && (
