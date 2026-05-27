@@ -71,9 +71,18 @@ jobs:
         run: bun run build
         working-directory: packages/desktop
 
+      - name: Copy drizzle-orm to desktop node_modules
+        # drizzle-orm lives in packages/web/node_modules (bun workspace).
+        # electron-builder only packs packages/desktop/node_modules, so we copy it there.
+        run: |
+          New-Item -ItemType Directory -Force -Path packages/desktop/node_modules/drizzle-orm
+          Copy-Item -Recurse -Force packages/web/node_modules/drizzle-orm/* packages/desktop/node_modules/drizzle-orm/
+        shell: powershell
+
       - name: Bundle API server with esbuild
-        # better-sqlite3 and electron are kept external (native / Electron built-ins)
-        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:@libsql/client --external:electron --target=node18
+        # better-sqlite3, drizzle-orm and electron are kept external.
+        # drizzle-orm is copied to desktop/node_modules so electron-builder packs it.
+        run: bunx esbuild packages/desktop/electron/api-server.ts --bundle --platform=node --format=cjs --outfile=packages/desktop/dist-electron/api-server.cjs --external:better-sqlite3 --external:drizzle-orm --external:@libsql/client --external:electron --target=node18
 
       - name: Package Windows .exe
         run: npx electron-builder --win --x64 --config electron-builder.yml --publish never
