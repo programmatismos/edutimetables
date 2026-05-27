@@ -266,12 +266,11 @@ function setupMenu() {
       submenu: [
         {
           label: "Check for Updates",
-          click: () => {
-            win?.webContents.send("updater:manual-check");
-          },
+          click: () => checkForUpdatesManually(),
         },
+        { type: "separator" as const },
         {
-          label: "About EduTimetables",
+          label: `About EduTimetables v${app.getVersion()}`,
           click: () => {
             dialog.showMessageBox({
               type: "info",
@@ -291,10 +290,73 @@ function setupMenu() {
 }
 
 // ─── Auto-updater ─────────────────────────────────────────────────────────────
+let _autoUpdater: any = null;
+
+function checkForUpdatesManually() {
+  if (isDev) {
+    dialog.showMessageBox({
+      type: "info",
+      title: "Έλεγχος Ενημερώσεων",
+      message: "Λειτουργεί μόνο σε παραγωγή.",
+      detail: `Τρέχουσα έκδοση: v${app.getVersion()}`,
+      buttons: ["OK"],
+    });
+    return;
+  }
+  if (!_autoUpdater) {
+    dialog.showMessageBox({
+      type: "info",
+      title: "Έλεγχος Ενημερώσεων",
+      message: "Η υπηρεσία ενημερώσεων δεν είναι διαθέσιμη ακόμα.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+
+  let foundUpdate = false;
+
+  const onAvailable = (info: any) => {
+    foundUpdate = true;
+    _autoUpdater.removeListener("update-not-available", onNotAvailable);
+    _autoUpdater.removeListener("error", onError);
+    // The renderer will handle the download UI via the existing updater:available event
+  };
+  const onNotAvailable = () => {
+    _autoUpdater.removeListener("update-available", onAvailable);
+    _autoUpdater.removeListener("error", onError);
+    if (!foundUpdate) {
+      dialog.showMessageBox(win!, {
+        type: "info",
+        title: "Έλεγχος Ενημερώσεων",
+        message: "Χρησιμοποιείτε την τελευταία έκδοση.",
+        detail: `Εγκατεστημένη έκδοση: v${app.getVersion()}`,
+        buttons: ["OK"],
+      });
+    }
+  };
+  const onError = (err: Error) => {
+    _autoUpdater.removeListener("update-available", onAvailable);
+    _autoUpdater.removeListener("update-not-available", onNotAvailable);
+    dialog.showMessageBox(win!, {
+      type: "error",
+      title: "Σφάλμα Ενημερώσεων",
+      message: "Αδύνατος ο έλεγχος ενημερώσεων.",
+      detail: err.message,
+      buttons: ["OK"],
+    });
+  };
+
+  _autoUpdater.once("update-available", onAvailable);
+  _autoUpdater.once("update-not-available", onNotAvailable);
+  _autoUpdater.once("error", onError);
+  _autoUpdater.checkForUpdates();
+}
+
 function setupAutoUpdater() {
   if (isDev) return;
 
   import("electron-updater").then(({ autoUpdater }) => {
+    _autoUpdater = autoUpdater;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.autoDownload = false;
 

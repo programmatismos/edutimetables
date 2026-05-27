@@ -1,7 +1,10 @@
 /**
  * Database client — dual mode:
- *   • Electron production: better-sqlite3 (native, sync)
+ *   • Electron production: better-sqlite3 (native, sync) loaded from asar.unpacked
  *   • Web / Turso remote: @libsql/client (HTTP, async)
+ *
+ * drizzle-orm adapters are statically imported so esbuild bundles them into
+ * api-server.cjs — no runtime module resolution needed.
  */
 
 import { createRequire } from "node:module";
@@ -9,22 +12,20 @@ import path from "node:path";
 import * as schema from "./schema";
 import { initDb } from "./init";
 
+// Static imports — bundled by esbuild into api-server.cjs
+import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
+import { drizzle as drizzleLibsql } from "drizzle-orm/libsql";
+
 const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
 
 let _db: any = null;
 let _rawSqlite: any = null; // exposed for sync seed operations
 
-function requireModule(name: string) {
-  // Native modules (e.g. better-sqlite3) must be loaded from app.asar.unpacked.
-  // Plain JS modules (e.g. drizzle-orm) are packed in asar — use normal require.
+function requireNative(name: string) {
+  // Native modules (.node binaries) must be loaded from app.asar.unpacked.
   const modulesPath = process.env.ELECTRON_MODULES_PATH;
   if (modulesPath) {
-    const unpackedPath = path.join(modulesPath, name);
-    try {
-      return _require(unpackedPath);
-    } catch {
-      // not in unpacked — fall through to asar require
-    }
+    return _require(path.join(modulesPath, name));
   }
   return _require(name);
 }
@@ -35,21 +36,19 @@ function getDb() {
   const sqlitePath = process.env.DATABASE_SQLITE_PATH;
 
   if (sqlitePath) {
-    const Database = requireModule("better-sqlite3");
-    const { drizzle } = requireModule("drizzle-orm/better-sqlite3");
+    const Database = requireNative("better-sqlite3");
     const sqlite = new Database(sqlitePath);
     sqlite.pragma("journal_mode = WAL");
     initDb(sqlite);
     _rawSqlite = sqlite;
-    _db = drizzle(sqlite, { schema });
+    _db = drizzleSqlite(sqlite, { schema });
   } else {
     const { createClient } = _require("@libsql/client");
-    const { drizzle } = _require("drizzle-orm/libsql");
     const client = createClient({
       url: process.env.DATABASE_URL!,
       authToken: process.env.DATABASE_AUTH_TOKEN,
     });
-    _db = drizzle(client, { schema });
+    _db = drizzleLibsql(client, { schema });
   }
 
   return _db;
