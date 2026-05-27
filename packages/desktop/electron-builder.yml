@@ -32,6 +32,8 @@ files:
   - node_modules/electron-updater/**
   - node_modules/builder-util-runtime/**
   - node_modules/semver/**
+  # drizzle-orm needed for better-sqlite3 adapter
+  - node_modules/drizzle-orm/**
 
 # Seed database — copied to userData on first launch
 extraResources:

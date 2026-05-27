@@ -15,14 +15,15 @@ let _db: any = null;
 let _rawSqlite: any = null; // exposed for sync seed operations
 
 function requireModule(name: string) {
-  // In Electron production, native modules live in app.asar.unpacked.
-  // ELECTRON_MODULES_PATH points there so require() finds them.
+  // Native modules (e.g. better-sqlite3) must be loaded from app.asar.unpacked.
+  // Plain JS modules (e.g. drizzle-orm) are packed in asar — use normal require.
   const modulesPath = process.env.ELECTRON_MODULES_PATH;
   if (modulesPath) {
+    const unpackedPath = path.join(modulesPath, name);
     try {
-      return _require(path.join(modulesPath, name));
+      return _require(unpackedPath);
     } catch {
-      // fall through to normal require
+      // not in unpacked — fall through to asar require
     }
   }
   return _require(name);
