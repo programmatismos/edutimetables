@@ -38,6 +38,10 @@ jobs:
         env:
           DATABASE_URL: file:./local.db
 
+      - name: Seed local.db with default data
+        run: node scripts/seed-local-db.mjs
+        working-directory: packages/web
+
       - name: Copy web dist to desktop
         run: |
           New-Item -ItemType Directory -Force -Path packages/desktop/web-dist

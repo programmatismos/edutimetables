@@ -83,7 +83,15 @@ async function startServer(): Promise<number> {
   // Import the pre-bundled API server (built by esbuild in CI)
   // Path: dist-electron/api-server.cjs (sibling to main.js)
   const serverModulePath = path.join(__dirname, "api-server.cjs");
-  const { default: honoApp } = await import(pathToFileURL(serverModulePath).href);
+  const serverModule = await import(pathToFileURL(serverModulePath).href);
+  // esbuild CJS bundle wraps ESM default export as module.exports.default
+  // dynamic import() of a CJS file gives { default: module.exports }
+  // so the Hono app is at serverModule.default.default
+  const rawExport = serverModule?.default;
+  const honoApp = rawExport?.default ?? rawExport;
+  if (typeof honoApp?.fetch !== "function") {
+    throw new Error(`honoApp.fetch is not a function. Got: ${JSON.stringify(Object.keys(rawExport ?? {}))}`);
+  }
 
   return new Promise((resolve, reject) => {
     const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
