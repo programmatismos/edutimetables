@@ -8,7 +8,6 @@
  * and only loaded dynamically in the web/Turso path.
  */
 
-import { createRequire } from "node:module";
 import path from "node:path";
 import * as schema from "./schema";
 import { initDb } from "./init";
@@ -16,7 +15,9 @@ import { initDb } from "./init";
 // Statically imported → esbuild bundles this (pure JS, no native dep)
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
 
-const _require = typeof require !== "undefined" ? require : createRequire(import.meta.url);
+// esbuild outputs CJS — require() is always available in that context
+declare const require: NodeRequire;
+const _require = require;
 
 let _db: any = null;
 let _rawSqlite: any = null; // exposed for sync seed operations

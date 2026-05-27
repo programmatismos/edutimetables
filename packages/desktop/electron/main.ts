@@ -290,7 +290,7 @@ function setupMenu() {
 }
 
 // ─── Auto-updater ─────────────────────────────────────────────────────────────
-let _autoUpdater: any = null;
+let _updaterReady: Promise<any> | null = null;
 
 function checkForUpdatesManually() {
   if (isDev) {
@@ -303,28 +303,31 @@ function checkForUpdatesManually() {
     });
     return;
   }
-  if (!_autoUpdater) {
+
+  if (!_updaterReady) {
     dialog.showMessageBox({
-      type: "info",
+      type: "warning",
       title: "Έλεγχος Ενημερώσεων",
-      message: "Η υπηρεσία ενημερώσεων δεν είναι διαθέσιμη ακόμα.",
+      message: "Η υπηρεσία ενημερώσεων δεν φορτώθηκε.",
+      detail: "Κλείστε και ανοίξτε ξανά την εφαρμογή.",
       buttons: ["OK"],
     });
     return;
   }
 
-  let foundUpdate = false;
+  _updaterReady.then((autoUpdater) => {
+    let settled = false;
 
-  const onAvailable = (info: any) => {
-    foundUpdate = true;
-    _autoUpdater.removeListener("update-not-available", onNotAvailable);
-    _autoUpdater.removeListener("error", onError);
-    // The renderer will handle the download UI via the existing updater:available event
-  };
-  const onNotAvailable = () => {
-    _autoUpdater.removeListener("update-available", onAvailable);
-    _autoUpdater.removeListener("error", onError);
-    if (!foundUpdate) {
+    const onAvailable = (_info: any) => {
+      if (settled) return; settled = true;
+      autoUpdater.removeListener("update-not-available", onNotAvailable);
+      autoUpdater.removeListener("error", onError);
+      // renderer handles the banner via updater:available IPC event
+    };
+    const onNotAvailable = () => {
+      if (settled) return; settled = true;
+      autoUpdater.removeListener("update-available", onAvailable);
+      autoUpdater.removeListener("error", onError);
       dialog.showMessageBox(win!, {
         type: "info",
         title: "Έλεγχος Ενημερώσεων",
@@ -332,31 +335,31 @@ function checkForUpdatesManually() {
         detail: `Εγκατεστημένη έκδοση: v${app.getVersion()}`,
         buttons: ["OK"],
       });
-    }
-  };
-  const onError = (err: Error) => {
-    _autoUpdater.removeListener("update-available", onAvailable);
-    _autoUpdater.removeListener("update-not-available", onNotAvailable);
-    dialog.showMessageBox(win!, {
-      type: "error",
-      title: "Σφάλμα Ενημερώσεων",
-      message: "Αδύνατος ο έλεγχος ενημερώσεων.",
-      detail: err.message,
-      buttons: ["OK"],
-    });
-  };
+    };
+    const onError = (err: Error) => {
+      if (settled) return; settled = true;
+      autoUpdater.removeListener("update-available", onAvailable);
+      autoUpdater.removeListener("update-not-available", onNotAvailable);
+      dialog.showMessageBox(win!, {
+        type: "error",
+        title: "Σφάλμα Ενημερώσεων",
+        message: "Αδύνατος ο έλεγχος ενημερώσεων.",
+        detail: err.message,
+        buttons: ["OK"],
+      });
+    };
 
-  _autoUpdater.once("update-available", onAvailable);
-  _autoUpdater.once("update-not-available", onNotAvailable);
-  _autoUpdater.once("error", onError);
-  _autoUpdater.checkForUpdates();
+    autoUpdater.once("update-available", onAvailable);
+    autoUpdater.once("update-not-available", onNotAvailable);
+    autoUpdater.once("error", onError);
+    autoUpdater.checkForUpdates();
+  });
 }
 
 function setupAutoUpdater() {
   if (isDev) return;
 
-  import("electron-updater").then(({ autoUpdater }) => {
-    _autoUpdater = autoUpdater;
+  _updaterReady = import("electron-updater").then(({ autoUpdater }) => {
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.autoDownload = false;
 
@@ -389,6 +392,8 @@ function setupAutoUpdater() {
     ipcMain.handle("updater:download", () => autoUpdater.downloadUpdate());
     ipcMain.handle("updater:install", () => autoUpdater.quitAndInstall());
     ipcMain.handle("updater:check", () => autoUpdater.checkForUpdates());
+
+    return autoUpdater;
   }).catch((err) => {
     console.error("electron-updater failed to load:", err);
   });
