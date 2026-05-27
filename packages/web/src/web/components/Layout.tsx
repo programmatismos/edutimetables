@@ -129,6 +129,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {!collapsed && (
                   <span className="whitespace-nowrap overflow-hidden">{btnLabel}</span>
                 )}
+              </button>
             </>
           )}
           {!collapsed && (
